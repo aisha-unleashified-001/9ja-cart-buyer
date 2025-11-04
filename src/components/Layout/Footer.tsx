@@ -130,7 +130,7 @@ const Footer: React.FC = () => {
           {/* Download App */}
           <div>
             <h4 className="text-white font-semibold mb-4">Download App</h4>
-            <p className="text-xs text-gray-300 mb-4">Save $3 with App New User Only</p>
+            <p className="text-xs text-gray-300 mb-4">Save ₦1,500 with App New User Only</p>
             
             {/* QR Code and App Store Links */}
             <div className="flex items-start gap-3 mb-6">

@@ -164,9 +164,9 @@ export const mockProducts: Product[] = [
       "Bluetooth Version": "5.0",
     },
     price: {
-      current: 192.0,
-      original: 240.0,
-      currency: "USD",
+      current: 96000.0,
+      original: 120000.0,
+      currency: "NGN",
       discount: {
         percentage: 20,
         amount: 48.0,
@@ -322,9 +322,9 @@ export const mockProducts: Product[] = [
       "Professional gaming controller with ergonomic design and responsive buttons for PC gaming.",
     shortDescription: "Professional gaming controller for PC",
     price: {
-      current: 120.0,
-      original: 160.0,
-      currency: "USD",
+      current: 60000.0,
+      original: 80000.0,
+      currency: "NGN",
       discount: {
         percentage: 40,
         amount: 40.0,
@@ -417,9 +417,9 @@ export const mockProducts: Product[] = [
       "Mechanical gaming keyboard with RGB backlighting and responsive switches.",
     shortDescription: "Mechanical gaming keyboard with RGB",
     price: {
-      current: 960.0,
-      original: 1160.0,
-      currency: "USD",
+      current: 480000.0,
+      original: 580000.0,
+      currency: "NGN",
       discount: {
         percentage: 35,
         amount: 200.0,
@@ -512,9 +512,9 @@ export const mockProducts: Product[] = [
       "24-inch IPS LCD gaming monitor with high refresh rate and low input lag.",
     shortDescription: "24-inch IPS LCD gaming monitor",
     price: {
-      current: 370.0,
-      original: 400.0,
-      currency: "USD",
+      current: 185000.0,
+      original: 200000.0,
+      currency: "NGN",
       discount: {
         percentage: 30,
         amount: 30.0,
@@ -607,9 +607,9 @@ export const mockProducts: Product[] = [
       "High-performance liquid CPU cooler with RGB lighting and quiet operation.",
     shortDescription: "High-performance liquid CPU cooler with RGB",
     price: {
-      current: 160.0,
-      original: 170.0,
-      currency: "USD",
+      current: 80000.0,
+      original: 85000.0,
+      currency: "NGN",
     },
     inventory: {
       inStock: true,
@@ -793,9 +793,9 @@ export const mockOrders: Order[] = [
             alt: "MacBook Pro 14 inch"
           },
           price: {
-            current: 2599.00,
-            original: 2799.00,
-            currency: "USD",
+            current: 1299500.00,
+            original: 1399500.00,
+            currency: "NGN",
             discount: {
               percentage: 20,
               amount: 200.0,

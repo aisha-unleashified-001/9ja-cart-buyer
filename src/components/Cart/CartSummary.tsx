@@ -45,9 +45,9 @@ const CartSummary: React.FC<CartSummaryProps> = ({ className }) => {
   };
 
   const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat('en-NG', {
       style: 'currency',
-      currency: 'USD'
+      currency: 'NGN'
     }).format(price);
   };
 
@@ -102,12 +102,12 @@ const CartSummary: React.FC<CartSummaryProps> = ({ className }) => {
           </div>
 
           {/* Free Shipping Alert */}
-          {subtotal < 100 && (
+          {subtotal < 50000 && (
             <Alert className="mt-4">
               <Truck className="w-4 h-4" />
               <div>
                 <p className="text-sm">
-                  Add {formatPrice(100 - subtotal)} more for free shipping!
+                  Add {formatPrice(50000 - subtotal)} more for free shipping!
                 </p>
               </div>
             </Alert>
@@ -142,7 +142,7 @@ const CartSummary: React.FC<CartSummaryProps> = ({ className }) => {
               <Truck className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
               <div>
                 <p className="font-medium text-gray-900">Free Shipping</p>
-                <p className="text-gray-600">On orders over $100</p>
+                <p className="text-gray-600">On orders over ₦50,000</p>
               </div>
             </div>
             

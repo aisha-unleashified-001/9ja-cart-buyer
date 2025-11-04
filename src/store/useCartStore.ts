@@ -88,7 +88,7 @@ export const useCartStore = create<CartStore>()(
 
       getShipping: () => {
         const subtotal = get().getSubtotal();
-        return subtotal > 100 ? 0 : 15; // Free shipping over $100
+        return subtotal > 50000 ? 0 : 2500; // Free shipping over ₦50,000
       },
 
       getTax: () => {

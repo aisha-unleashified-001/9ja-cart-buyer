@@ -8,8 +8,8 @@ import type {
 } from '../types';
 
 // Price utilities
-export const formatPrice = (price: number, currency: string = 'USD'): string => {
-  return new Intl.NumberFormat('en-US', {
+export const formatPrice = (price: number, currency: string = 'NGN'): string => {
+  return new Intl.NumberFormat('en-NG', {
     style: 'currency',
     currency,
   }).format(price);

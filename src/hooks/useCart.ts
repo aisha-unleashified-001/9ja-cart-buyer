@@ -30,9 +30,9 @@ export const useCart = () => {
   };
 
   const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat('en-NG', {
       style: 'currency',
-      currency: 'USD'
+      currency: 'NGN'
     }).format(price);
   };
 
@@ -54,8 +54,8 @@ export const useCart = () => {
       formattedTax: formatPrice(tax),
       formattedTotal: formatPrice(total),
       hasItems: itemCount > 0,
-      qualifiesForFreeShipping: subtotal >= 100,
-      amountForFreeShipping: Math.max(0, 100 - subtotal)
+      qualifiesForFreeShipping: subtotal >= 50000,
+      amountForFreeShipping: Math.max(0, 50000 - subtotal)
     };
   };
 

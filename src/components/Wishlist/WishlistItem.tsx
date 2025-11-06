@@ -21,7 +21,7 @@ const WishlistItemComponent: React.FC<WishlistItemProps> = ({ item }) => {
   const originalPrice = typeof product.price === 'number' ? undefined : product.price.original;
   const discount = typeof product.price === 'number' ? undefined : product.price.discount;
   const isOnSale = originalPrice && originalPrice > currentPrice;
-  const isInCart = isItemInCart(product.id);
+  const isInCart = isItemInCart(product.id, false); // Default to guest cart for wishlist
 
   const handleRemoveFromWishlist = () => {
     removeItem(product.id);

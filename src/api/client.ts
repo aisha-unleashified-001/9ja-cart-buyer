@@ -196,7 +196,27 @@ export const testApiConnection = async () => {
   }
 };
 
+// Debug function to test cart API
+export const testCartApi = async () => {
+  console.log('🧪 Testing Cart API...');
+  
+  try {
+    const { cartApi } = await import('./cart');
+    
+    // Test getting cart (should work if user is authenticated)
+    console.log('📦 Testing get cart...');
+    const cartResponse = await cartApi.getCart();
+    console.log('✅ Get cart successful:', cartResponse);
+    
+    return cartResponse;
+  } catch (error) {
+    console.error('❌ Cart API test failed:', error);
+    throw error;
+  }
+};
+
 // Make it available globally for debugging
 if (typeof window !== 'undefined') {
   (window as any).testApiConnection = testApiConnection;
+  (window as any).testCartApi = testCartApi;
 }

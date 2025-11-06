@@ -1,89 +1,124 @@
+import { useAuthStore } from '../store/useAuthStore';
 import { useCartStore } from '../store/useCartStore';
+import { useNotificationContext } from '../providers/NotificationProvider';
 import type { Product } from '../types';
 
+/**
+ * Clean cart hook that handles both guest and authenticated users
+ * Automatically switches behavior based on authentication state
+ */
 export const useCart = () => {
-  const store = useCartStore();
+  const { isAuthenticated } = useAuthStore();
+  const { showNotification } = useNotificationContext();
+  const {
+    guestItems,
+    serverItems,
+    isOpen,
+    isLoading,
+    error,
+    addItem: storeAddItem,
+    removeItem: storeRemoveItem,
+    updateQuantity: storeUpdateQuantity,
+    clearCart: storeClearCart,
+    toggleCart,
+    getItems,
+    getTotalItems,
+    getTotalPrice,
+    getSubtotal,
+    getShipping,
+    getTax,
+    getFinalTotal,
+    isItemInCart,
+    getItemQuantity,
+  } = useCartStore();
 
-  const addToCart = (product: Product, quantity: number = 1) => {
-    store.addItem(product, quantity);
+  // Wrapper methods that automatically pass authentication state
+  const addToCart = async (product: Product, quantity = 1) => {
+    await storeAddItem(product, quantity, isAuthenticated);
     
-    // You could add toast notifications here
-    // toast.success(`Added ${product.name} to cart`);
+    // Show notification for guest users
+    if (!isAuthenticated) {
+      showNotification('Sign in to save your cart', 'info', 4000);
+    }
   };
 
-  const removeFromCart = (productId: string) => {
-    store.removeItem(productId);
-    
-    // You could add toast notifications here
-    // toast.success('Item removed from cart');
+  const removeFromCart = async (productId: string) => {
+    await storeRemoveItem(productId, isAuthenticated);
   };
 
-  const updateCartItemQuantity = (productId: string, quantity: number) => {
-    store.updateQuantity(productId, quantity);
+  const updateItemQuantity = async (productId: string, quantity: number) => {
+    await storeUpdateQuantity(productId, quantity, isAuthenticated);
   };
 
-  const clearAllItems = () => {
-    store.clearCart();
-    
-    // You could add toast notifications here
-    // toast.success('Cart cleared');
+  const clearAllItems = async () => {
+    await storeClearCart(isAuthenticated);
   };
 
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('en-NG', {
-      style: 'currency',
-      currency: 'NGN'
-    }).format(price);
-  };
+  // Computed values
+  const items = getItems(isAuthenticated);
+  const totalItems = getTotalItems(isAuthenticated);
+  const totalPrice = getTotalPrice(isAuthenticated);
+  const subtotal = getSubtotal(isAuthenticated);
+  const shipping = getShipping(isAuthenticated);
+  const tax = getTax(isAuthenticated);
+  const finalTotal = getFinalTotal(isAuthenticated);
 
-  const getCartSummary = () => {
-    const subtotal = store.getSubtotal();
-    const shipping = store.getShipping();
-    const tax = store.getTax();
-    const total = store.getFinalTotal();
-    const itemCount = store.getTotalItems();
+  const isInCart = (productId: string) => isItemInCart(productId, isAuthenticated);
+  const getQuantity = (productId: string) => getItemQuantity(productId, isAuthenticated);
 
-    return {
-      subtotal,
-      shipping,
-      tax,
-      total,
-      itemCount,
-      formattedSubtotal: formatPrice(subtotal),
-      formattedShipping: shipping === 0 ? 'Free' : formatPrice(shipping),
-      formattedTax: formatPrice(tax),
-      formattedTotal: formatPrice(total),
-      hasItems: itemCount > 0,
-      qualifiesForFreeShipping: subtotal >= 50000,
-      amountForFreeShipping: Math.max(0, 50000 - subtotal)
-    };
-  };
+  // Cart summary for backward compatibility
+  const getCartSummary = () => ({
+    subtotal,
+    shipping,
+    tax,
+    total: finalTotal,
+    itemCount: totalItems,
+    formattedSubtotal: new Intl.NumberFormat("en-NG", {
+      style: "currency",
+      currency: "NGN",
+    }).format(subtotal),
+    formattedShipping: new Intl.NumberFormat("en-NG", {
+      style: "currency", 
+      currency: "NGN",
+    }).format(shipping),
+    formattedTotal: new Intl.NumberFormat("en-NG", {
+      style: "currency",
+      currency: "NGN", 
+    }).format(finalTotal),
+  });
 
   return {
+    // Data
+    items,
+    totalItems,
+    totalPrice,
+    subtotal,
+    shipping,
+    tax,
+    finalTotal,
+    
     // State
-    items: store.items,
-    isOpen: store.isOpen,
+    isOpen,
+    isLoading,
+    isOperating: isLoading, // Alias for backward compatibility
+    error,
+    isAuthenticated,
     
     // Actions
     addToCart,
     removeFromCart,
-    updateCartItemQuantity,
+    updateItemQuantity,
+    updateCartItemQuantity: updateItemQuantity, // Alias for backward compatibility
     clearAllItems,
-    toggleCart: store.toggleCart,
+    toggleCart,
     
-    // Computed values
-    totalItems: store.getTotalItems(),
-    totalPrice: store.getTotalPrice(),
-    isItemInCart: store.isItemInCart,
-    getItemQuantity: store.getItemQuantity,
-    
-    // Helpers
-    formatPrice,
+    // Utilities
+    isInCart,
+    getQuantity,
     getCartSummary,
     
-    // Raw store methods (for advanced usage)
-    store
+    // Raw data for debugging
+    guestItems,
+    serverItems,
   };
 };
-
-export default useCart;

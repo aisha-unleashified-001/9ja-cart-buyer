@@ -224,9 +224,28 @@ export interface ProductWithRelations extends Omit<Product, 'categoryId' | 'subc
 
 // Cart types
 export interface CartItem {
-  id: string;
-  product: Product;
+  // Client-side fields
+  id: string;           // productId for guest, cartItemId for authenticated
+  product: Product;     // Full product data
   quantity: number;
+  
+  // Server-side fields (when authenticated)
+  cartItemId?: string;  // Backend cart item ID
+  vendor?: string;      // Vendor ID from backend
+  price?: number;       // Server-calculated price
+  subtotal?: number;    // Server-calculated subtotal
+  addedAt?: string;     // Server timestamp
+  productImages?: string[]; // Server product images
+}
+
+export interface CartSummary {
+  totalItems: number;
+  totalQuantity: number;
+  subtotal: number;
+  tax: number;
+  shipping: number;
+  total: number;
+  isServerSynced: boolean; // Indicates if data is from server
 }
 
 // Order types

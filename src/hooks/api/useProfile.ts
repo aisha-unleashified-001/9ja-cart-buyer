@@ -1,7 +1,8 @@
 import { useState, useCallback } from 'react';
 import { profileApi, type UpdateProfileRequest } from '../../api/profile';
+import { addressApi, transformAddressToApi } from '../../api/address';
 import { apiErrorUtils } from '../../utils/api-errors';
-import type { UserProfile, ProfileUpdateData, PasswordUpdateData } from '../../types';
+import type { UserProfile, ProfileUpdateData, PasswordUpdateData, UserAddress } from '../../types';
 import { useAuthStore } from '../../store/useAuthStore';
 
 // Hook for managing user profile
@@ -113,6 +114,76 @@ export const useProfile = () => {
     }
   }, []);
 
+  // Add new address
+  const addAddress = useCallback(async (addressData: Omit<UserAddress, 'id' | 'createdAt' | 'updatedAt'>): Promise<void> => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const apiData = transformAddressToApi(
+        addressData.streetAddress,
+        addressData.city,
+        addressData.state,
+        addressData.zipCode,
+        addressData.country,
+        addressData.isDefault
+      );
+
+      await addressApi.addAddress(apiData);
+      
+      // Refresh profile data to get updated addresses
+      await fetchProfile();
+
+    } catch (err) {
+      const errorMessage = apiErrorUtils.getErrorMessage(err);
+      setError(errorMessage);
+      throw new Error(errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [fetchProfile]);
+
+  // Update existing address
+  const updateAddress = useCallback(async (id: string, addressData: Omit<UserAddress, 'id' | 'createdAt' | 'updatedAt'>): Promise<void> => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const apiData = transformAddressToApi(
+        addressData.streetAddress,
+        addressData.city,
+        addressData.state,
+        addressData.zipCode,
+        addressData.country,
+        addressData.isDefault
+      );
+
+      await addressApi.editAddress(id, apiData);
+      
+      // Refresh profile data to get updated addresses
+      await fetchProfile();
+
+    } catch (err) {
+      const errorMessage = apiErrorUtils.getErrorMessage(err);
+      setError(errorMessage);
+      throw new Error(errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [fetchProfile]);
+
+  // Get default address
+  const getDefaultAddress = useCallback((): UserAddress | null => {
+    if (!profile?.addresses) return null;
+    return profile.addresses.find(addr => addr.isDefault) || null;
+  }, [profile]);
+
+  // Get all addresses
+  const getAddresses = useCallback((): UserAddress[] => {
+    if (!profile?.addresses) return [];
+    return profile.addresses;
+  }, [profile]);
+
   return {
     profile,
     isLoading,
@@ -120,5 +191,9 @@ export const useProfile = () => {
     fetchProfile,
     updateProfile,
     updatePassword,
+    addAddress,
+    updateAddress,
+    getDefaultAddress,
+    getAddresses,
   };
 };

@@ -8,4 +8,4 @@ export * from './useMockProducts';
 
 // Utility hooks
 export { default as useClickOutside } from './useClickOutside';
-export { useCart, default as useCartHook } from './useCart';
+export { useCart } from './useCart';

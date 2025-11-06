@@ -2,8 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Truck, Shield, RotateCcw } from 'lucide-react';
 import { Button, Card, CardContent, Alert } from '../UI';
-import { useCartStore } from '../../store/useCartStore';
-import { useAuthStore } from '../../store/useAuthStore';
+import { useCart } from '../../hooks/useCart';
 
 interface CartSummaryProps {
   className?: string;
@@ -11,23 +10,17 @@ interface CartSummaryProps {
 
 const CartSummary: React.FC<CartSummaryProps> = ({ className }) => {
   const navigate = useNavigate();
-  const { isAuthenticated } = useAuthStore();
   const { 
-    getTotalItems, 
-    getSubtotal, 
-    getShipping, 
-    getTax, 
-    getFinalTotal 
-  } = useCartStore();
+    totalItems,
+    subtotal,
+    shipping,
+    tax,
+    finalTotal,
+    isAuthenticated
+  } = useCart();
 
   const [promoCode, setPromoCode] = useState('');
   const [promoApplied, setPromoApplied] = useState(false);
-
-  const totalItems = getTotalItems();
-  const subtotal = getSubtotal();
-  const shipping = getShipping();
-  const tax = getTax();
-  const finalTotal = getFinalTotal();
 
   const handleCheckout = () => {
     if (!isAuthenticated) {

@@ -2,7 +2,7 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { Minus, Plus, Trash2, Heart, Star } from "lucide-react";
 import { Button, Badge, Image } from "../UI";
-import { useCartStore } from "../../store/useCartStore";
+import { useCart } from "../../hooks/useCart";
 import { useWishlistStore } from "../../store/useWishlistStore";
 import type { CartItem as CartItemType } from "../../types";
 import { cn } from "../../lib/utils";
@@ -18,7 +18,7 @@ const CartItem: React.FC<CartItemProps> = ({
   onRemove,
   isRemoving = false,
 }) => {
-  const { updateQuantity } = useCartStore();
+  const { updateCartItemQuantity, isOperating } = useCart();
   const { addItem: addToWishlist, removeItem: removeFromWishlist, isItemInWishlist } = useWishlistStore();
 
   const product = item.product;
@@ -30,12 +30,12 @@ const CartItem: React.FC<CartItemProps> = ({
   const discount =
     typeof product.price === "object" ? product.price.discount : undefined;
 
-  const handleQuantityChange = (newQuantity: number) => {
+  const handleQuantityChange = async (newQuantity: number) => {
     if (newQuantity < 1) {
       onRemove?.(product.id);
       return;
     }
-    updateQuantity(product.id, newQuantity);
+    await updateCartItemQuantity(product.id, newQuantity);
   };
 
   const formatPrice = (price: number) => {
@@ -138,7 +138,7 @@ const CartItem: React.FC<CartItemProps> = ({
                 size="icon"
                 onClick={() => handleQuantityChange(item.quantity - 1)}
                 className="h-10 w-10 sm:h-8 sm:w-8 rounded-none touch-target-sm"
-                disabled={item.quantity <= 1}
+                disabled={item.quantity <= 1 || isOperating}
               >
                 <Minus className="w-3 h-3" />
               </Button>
@@ -150,6 +150,7 @@ const CartItem: React.FC<CartItemProps> = ({
                 size="icon"
                 onClick={() => handleQuantityChange(item.quantity + 1)}
                 className="h-10 w-10 sm:h-8 sm:w-8 rounded-none touch-target-sm"
+                disabled={isOperating}
               >
                 <Plus className="w-3 h-3" />
               </Button>

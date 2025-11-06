@@ -10,6 +10,7 @@ export { Alert } from './Alert';
 export { Image } from './Image';
 export { default as CartBadge } from './CartBadge';
 export { ErrorBoundary } from './ErrorBoundary';
+export { Toast, ToastContainer } from './Toast';
 
 export type { ButtonProps } from './Button';
 export type { InputProps } from './Input';

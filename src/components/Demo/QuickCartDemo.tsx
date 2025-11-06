@@ -85,7 +85,7 @@ const QuickCartDemo: React.FC = () => {
     }
   };
 
-  const totalItems = getTotalItems();
+  const totalItems = getTotalItems(false); // Demo uses guest cart
 
   if (totalItems > 0 || products.length < 2) {
     return null; // Don't show if cart already has items or not enough products loaded

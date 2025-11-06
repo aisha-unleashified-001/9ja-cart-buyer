@@ -10,36 +10,49 @@ import {
   Card, 
   CardContent, 
   Badge, 
-  Modal
+  Modal,
+  Alert
 } from '../../components/UI';
 import { CartItem, CartSummary } from '../../components/Cart';
-import { useCartStore } from '../../store/useCartStore';
+import { useCart } from '../../hooks/useCart';
 
 const CartPage: React.FC = () => {
   const navigate = useNavigate();
   const { 
     items, 
-    removeItem, 
-    clearCart, 
-    getTotalItems 
-  } = useCartStore();
+    removeFromCart, 
+    clearAllItems, 
+    totalItems,
+    isLoading,
+    error,
+    isAuthenticated
+  } = useCart();
 
   const [showClearModal, setShowClearModal] = useState(false);
   const [removingItemId, setRemovingItemId] = useState<string | null>(null);
 
-  const totalItems = getTotalItems();
 
-  const handleRemoveItem = (productId: string) => {
+
+  const handleRemoveItem = async (productId: string) => {
     setRemovingItemId(productId);
-    setTimeout(() => {
-      removeItem(productId);
-      setRemovingItemId(null);
+    setTimeout(async () => {
+      try {
+        await removeFromCart(productId);
+      } catch (error) {
+        console.error('Failed to remove item:', error);
+      } finally {
+        setRemovingItemId(null);
+      }
     }, 300);
   };
 
-  const handleClearCart = () => {
-    clearCart();
-    setShowClearModal(false);
+  const handleClearCart = async () => {
+    try {
+      await clearAllItems();
+      setShowClearModal(false);
+    } catch (error) {
+      console.error('Failed to clear cart:', error);
+    }
   };
 
   if (items.length === 0) {
@@ -97,23 +110,60 @@ const CartPage: React.FC = () => {
             </Button>
             <div className="flex flex-col sm:flex-row sm:items-center gap-2">
               <h1 className="text-xl sm:text-3xl font-bold text-gray-900">Shopping Cart</h1>
-              <Badge variant="secondary" className="w-fit">
-                {totalItems} {totalItems === 1 ? 'item' : 'items'}
-              </Badge>
+              <div className="flex items-center gap-2">
+                <Badge variant="secondary" className="w-fit">
+                  {totalItems} {totalItems === 1 ? 'item' : 'items'}
+                </Badge>
+                {isLoading && (
+                  <Badge variant="outline" className="text-blue-600 border-blue-200">
+                    Loading...
+                  </Badge>
+                )}
+                {!isAuthenticated && items.length > 0 && (
+                  <Badge variant="outline" className="text-orange-600 border-orange-200">
+                    Guest Cart
+                  </Badge>
+                )}
+              </div>
             </div>
           </div>
           
-          {items.length > 0 && (
-            <Button
-              variant="outline"
-              onClick={() => setShowClearModal(true)}
-              className="text-red-600 border-red-200 hover:bg-red-50 w-full sm:w-auto touch-target"
-            >
-              <Trash2 className="w-4 h-4 mr-2" />
-              Clear Cart
-            </Button>
-          )}
+          <div className="flex gap-2 w-full sm:w-auto">
+            {items.length > 0 && (
+              <Button
+                variant="outline"
+                onClick={() => setShowClearModal(true)}
+                className="text-red-600 border-red-200 hover:bg-red-50 touch-target"
+                disabled={isLoading}
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                Clear Cart
+              </Button>
+            )}
+          </div>
         </div>
+
+        {/* Error Alert */}
+        {error && (
+          <Alert 
+            variant="destructive" 
+            title="Error"
+            className="mb-6"
+          >
+            {error}
+          </Alert>
+        )}
+
+        {/* Guest Cart Notice */}
+        {!isAuthenticated && items.length > 0 && (
+          <Alert 
+            variant="default" 
+            title="Guest Cart"
+            className="mb-6 border-orange-200 bg-orange-50"
+          >
+            Your cart will be lost when you refresh the page. <Link to="/auth/login" className="font-medium text-orange-700 hover:text-orange-800 underline">Sign in</Link> to save your cart.
+          </Alert>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
           {/* Cart Items */}

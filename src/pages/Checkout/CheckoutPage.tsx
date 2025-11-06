@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { CreditCard, Truck, Shield, AlertCircle, User, UserPlus } from 'lucide-react';
+import { CreditCard, Truck, Shield, AlertCircle, User, UserPlus, Plus } from 'lucide-react';
 import { Button, Input, Card, CardContent, Breadcrumb, Alert } from '../../components/UI';
-import { CheckoutSuccess, OrderSummary } from '../../components/Checkout';
-import { useCartStore } from '../../store/useCartStore';
+import { CheckoutSuccess, OrderSummary, AddressSummary, AddressSelector } from '../../components/Checkout';
+import { useCart } from '../../hooks/useCart';
 import { useAuthStore } from '../../store/useAuthStore';
+import { useProfile } from '../../hooks/api/useProfile';
 import { validateBillingDetails, formatPhoneNumber, type BillingDetailsForm, type ValidationError } from '../../lib/checkoutValidation';
 import { cn } from '../../lib/utils';
+import type { UserAddress } from '../../types';
 
 interface PaymentMethod {
   id: string;
@@ -16,8 +18,10 @@ interface PaymentMethod {
 
 const CheckoutPage: React.FC = () => {
   const navigate = useNavigate();
-  const { items, getTotalPrice, clearCart } = useCartStore();
+  const { items, totalPrice, clearAllItems } = useCart();
   const { isAuthenticated, user } = useAuthStore();
+  const { profile, fetchProfile, getDefaultAddress, getAddresses, addAddress } = useProfile();
+  
   const [isProcessing, setIsProcessing] = useState(false);
   const [saveInfo, setSaveInfo] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState('cash-on-delivery');
@@ -25,6 +29,12 @@ const CheckoutPage: React.FC = () => {
   const [orderNumber, setOrderNumber] = useState('');
   const [validationErrors, setValidationErrors] = useState<ValidationError[]>([]);
   const [checkoutAsGuest, setCheckoutAsGuest] = useState(false);
+  
+  // Address management state
+  const [showAddressForm, setShowAddressForm] = useState(false);
+  const [showAddressSelector, setShowAddressSelector] = useState(false);
+  const [selectedAddress, setSelectedAddress] = useState<UserAddress | null>(null);
+  const [isAddingNewAddress, setIsAddingNewAddress] = useState(false);
 
   const [billingDetails, setBillingDetails] = useState<BillingDetailsForm>({
     firstName: '',
@@ -37,18 +47,49 @@ const CheckoutPage: React.FC = () => {
     emailAddress: '',
   });
 
-  // Pre-fill form with user data if authenticated
+  // Load profile and set up addresses
   useEffect(() => {
-    if (isAuthenticated && user) {
-      setBillingDetails(prev => ({
-        ...prev,
-        firstName: user.firstName || '',
-        lastName: user.lastName || '',
-        emailAddress: user.email || '',
-        phoneNumber: user.phone || '',
-      }));
+    if (isAuthenticated && !profile) {
+      fetchProfile();
     }
-  }, [isAuthenticated, user]);
+  }, [isAuthenticated, profile, fetchProfile]);
+
+  // Set up default address and pre-fill form
+  useEffect(() => {
+    if (isAuthenticated && profile) {
+      const defaultAddress = getDefaultAddress();
+      
+      if (defaultAddress) {
+        setSelectedAddress(defaultAddress);
+        // Auto-fill form with default address
+        setBillingDetails(prev => ({
+          ...prev,
+          firstName: user?.firstName || '',
+          lastName: user?.lastName || '',
+          emailAddress: user?.email || '',
+          phoneNumber: user?.phone || '',
+          streetAddress: defaultAddress.streetAddress,
+          townCity: defaultAddress.city,
+          apartment: '',
+          companyName: '',
+        }));
+        setShowAddressForm(false); // Hide form since we have default address
+      } else {
+        // No default address, show form
+        setShowAddressForm(true);
+        setBillingDetails(prev => ({
+          ...prev,
+          firstName: user?.firstName || '',
+          lastName: user?.lastName || '',
+          emailAddress: user?.email || '',
+          phoneNumber: user?.phone || '',
+        }));
+      }
+    } else if (!isAuthenticated && checkoutAsGuest) {
+      // Guest checkout - always show form
+      setShowAddressForm(true);
+    }
+  }, [isAuthenticated, profile, user, checkoutAsGuest, getDefaultAddress]);
 
   const paymentMethods: PaymentMethod[] = [
     {
@@ -73,9 +114,76 @@ const CheckoutPage: React.FC = () => {
     },
   ];
 
-  const subtotal = getTotalPrice();
+  const subtotal = totalPrice;
   const shipping = 0; // Free shipping
   const total = subtotal + shipping;
+
+  // Address management functions
+  const handleEditAddress = () => {
+    setShowAddressForm(true);
+    setShowAddressSelector(false);
+  };
+
+  const handleChangeAddress = () => {
+    setShowAddressSelector(true);
+    setShowAddressForm(false);
+  };
+
+  const handleSelectAddress = (address: UserAddress) => {
+    setSelectedAddress(address);
+    // Update billing details with selected address
+    setBillingDetails(prev => ({
+      ...prev,
+      streetAddress: address.streetAddress,
+      townCity: address.city,
+      apartment: '',
+      companyName: '',
+    }));
+    setShowAddressSelector(false);
+    setShowAddressForm(false);
+  };
+
+  const handleAddNewAddress = () => {
+    setIsAddingNewAddress(true);
+    setShowAddressSelector(false);
+    setShowAddressForm(true);
+    // Clear form for new address
+    setBillingDetails(prev => ({
+      ...prev,
+      streetAddress: '',
+      apartment: '',
+      townCity: '',
+      companyName: '',
+    }));
+  };
+
+  const handleSaveNewAddress = async () => {
+    if (!isAuthenticated) return;
+    
+    try {
+      const newAddress: Omit<UserAddress, 'id' | 'createdAt' | 'updatedAt'> = {
+        streetAddress: billingDetails.streetAddress,
+        city: billingDetails.townCity,
+        state: 'Lagos', // Default for now - could be made dynamic
+        zipCode: '100001', // Default for now - could be made dynamic
+        country: 'Nigeria',
+        isDefault: saveInfo, // Use saveInfo checkbox to set as default
+      };
+
+      await addAddress(newAddress);
+      setIsAddingNewAddress(false);
+      setShowAddressForm(false);
+      
+      // Refresh addresses and select the new one
+      const addresses = getAddresses();
+      const newAddressFromList = addresses[addresses.length - 1]; // Assuming it's the last one
+      if (newAddressFromList) {
+        setSelectedAddress(newAddressFromList);
+      }
+    } catch (error) {
+      console.error('Failed to save address:', error);
+    }
+  };
 
 
 
@@ -129,7 +237,7 @@ const CheckoutPage: React.FC = () => {
       setShowSuccess(true);
       
       // Clear cart
-      clearCart();
+      await clearAllItems();
     } catch (error) {
       alert('Failed to place order. Please try again.');
     } finally {
@@ -280,8 +388,39 @@ const CheckoutPage: React.FC = () => {
                     </div>
                   )}
                 </div>
-                
-                <div className="space-y-4 sm:space-y-6">
+
+                {/* Address Management Section */}
+                {isAuthenticated && (
+                  <div className="mb-6">
+                    {selectedAddress && !showAddressForm && !showAddressSelector && (
+                      <AddressSummary
+                        address={selectedAddress}
+                        onEdit={handleEditAddress}
+                        onChangeAddress={getAddresses().length > 1 ? handleChangeAddress : undefined}
+                        showChangeOption={getAddresses().length > 1}
+                      />
+                    )}
+
+                    {showAddressSelector && (
+                      <AddressSelector
+                        addresses={getAddresses()}
+                        selectedAddressId={selectedAddress?.id || null}
+                        onSelectAddress={handleSelectAddress}
+                        onAddNew={handleAddNewAddress}
+                        onCancel={() => {
+                          setShowAddressSelector(false);
+                          if (selectedAddress) {
+                            setShowAddressForm(false);
+                          }
+                        }}
+                      />
+                    )}
+                  </div>
+                )}
+
+                {/* Show form if no address selected, editing, or guest checkout */}
+                {showAddressForm && (
+                  <div className="space-y-4 sm:space-y-6">
                   {/* First Name */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -425,15 +564,48 @@ const CheckoutPage: React.FC = () => {
                     )}
                   </div>
 
-                  {/* Save Information Checkbox - Only for authenticated users */}
-                  {isAuthenticated && (
+                  {/* Save address options */}
+                  {isAuthenticated && (showAddressForm || isAddingNewAddress) && (
+                    <div className="flex items-center justify-between pt-4">
+                      <div className="flex items-center space-x-2">
+                        <input
+                          id="save-address"
+                          name="save-address"
+                          type="checkbox"
+                          checked={saveInfo}
+                          onChange={(e) => setSaveInfo(e.target.checked)}
+                          className="w-4 h-4 text-primary bg-gray-100 border-gray-300 rounded focus:ring-primary focus:ring-2"
+                        />
+                        <label htmlFor="save-address" className="text-sm text-gray-700">
+                          {isAddingNewAddress ? 'Save as new address' : 'Update my saved address'}
+                        </label>
+                      </div>
+                      
+                      {isAddingNewAddress && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={handleSaveNewAddress}
+                          className="flex items-center gap-1"
+                        >
+                          <Plus className="w-3 h-3" />
+                          Save Address
+                        </Button>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Guest save info checkbox */}
+                  {!isAuthenticated && checkoutAsGuest && (
                     <div className="flex items-center space-x-2 pt-4">
                       <input
-                        type="checkbox"
                         id="save-info"
+                        name="save-info"
+                        type="checkbox"
                         checked={saveInfo}
                         onChange={(e) => setSaveInfo(e.target.checked)}
-                        className="w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded focus:ring-green-500 focus:ring-2"
+                        className="w-4 h-4 text-primary bg-gray-100 border-gray-300 rounded focus:ring-primary focus:ring-2"
                       />
                       <label htmlFor="save-info" className="text-sm text-gray-700">
                         Save this information for faster check-out next time
@@ -455,7 +627,15 @@ const CheckoutPage: React.FC = () => {
                       </Button>
                     </div>
                   )}
-                </div>
+                  </div>
+                )}
+
+                {/* Address summary for non-form view */}
+                {isAuthenticated && selectedAddress && !showAddressForm && !showAddressSelector && (
+                  <div className="pt-4 text-sm text-muted-foreground">
+                    <p>✓ Using saved address for billing information</p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>

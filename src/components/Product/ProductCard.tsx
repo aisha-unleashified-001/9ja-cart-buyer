@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { Heart, Eye, ShoppingCart, Star } from "lucide-react";
 import { Button, Badge, Card, CardContent, Image } from "../UI";
-import { useCartStore } from "../../store/useCartStore";
+import { useCart } from "../../hooks/useCart";
 import { useWishlistStore } from "../../store/useWishlistStore";
 import type { Product, ProductSummary } from "../../types";
 import { cn } from "../../lib/utils";
@@ -18,7 +18,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
   showQuickAdd = true,
   className,
 }) => {
-  const { addItem } = useCartStore();
+  const { addToCart, isOperating } = useCart();
   const { addItem: addToWishlist, removeItem: removeFromWishlist, isItemInWishlist } = useWishlistStore();
   const [imageLoading, setImageLoading] = useState(true);
   
@@ -81,7 +81,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
       tags: "tags" in product ? product.tags : [],
     } as Product;
 
-    addItem(productForCart, 1);
+    addToCart(productForCart, 1);
   };
 
   const handleWishlist = (e: React.MouseEvent) => {
@@ -258,9 +258,10 @@ const ProductCard: React.FC<ProductCardProps> = ({
                     variant="ghost"
                     className="w-full text-white bg-black hover:bg-black hover:text-white backdrop-blur-sm font-medium rounded-none"
                     onClick={handleAddToCart}
+                    disabled={isOperating}
                   >
                     <ShoppingCart className="w-4 h-4 mr-2" />
-                    Add To Cart
+                    {isOperating ? "Adding..." : "Add To Cart"}
                   </Button>
                 </div>
               )}

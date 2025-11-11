@@ -90,7 +90,8 @@ export const mapApiProductToProduct = (apiProduct: ApiProductData): Product => {
     variants: [], // API doesn't provide variants
     images,
     reviews,
-    sellerId: 'api-seller', // Default seller for API products
+    sellerId: apiProduct.storeName || 'api-seller', // Use storeName as sellerId
+    storeName: apiProduct.storeName, // Store/vendor name from API
     shipping: {
       weight: undefined,
       dimensions: undefined,
@@ -183,6 +184,7 @@ export const mapApiProductToProductSummary = (apiProduct: ApiProductData): Produ
     images,
     reviews,
     flags,
+    storeName: apiProduct.storeName, // Store/vendor name from API
   };
 };
 

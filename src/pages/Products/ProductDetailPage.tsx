@@ -189,10 +189,14 @@ const ProductDetailPage: React.FC = () => {
               </h1>
               <div className="flex items-center gap-2 mb-4">
                 <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
-                  <span className="text-white text-sm font-bold">9J</span>
+                  <span className="text-white text-sm font-bold">
+                    {product.storeName ? product.storeName.charAt(0).toUpperCase() : '9J'}
+                  </span>
                 </div>
                 <div>
-                  <p className="font-medium text-gray-900">9jaCart</p>
+                  <p className="font-medium text-gray-900">
+                    {product.storeName || '9jaCart'}
+                  </p>
                   <p className="text-sm text-gray-500">Nigeria</p>
                 </div>
                 <Badge variant="success" className="ml-2">

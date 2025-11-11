@@ -181,6 +181,7 @@ export interface Product extends BaseEntity, Slug {
 
   // Seller reference
   sellerId: string; // Reference to seller
+  storeName?: string; // Store/vendor name from API
 
   // Shipping
   shipping: Shipping;
@@ -213,6 +214,7 @@ export interface ProductSummary {
   images: Pick<ProductMedia, 'main' | 'alt'>;
   reviews: Pick<ProductReviews, 'average' | 'total'>;
   flags: ProductFlags;
+  storeName?: string; // Store/vendor name from API
 }
 
 // Product with populated references (for detailed views)

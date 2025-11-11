@@ -105,6 +105,12 @@ const MiniCart: React.FC<MiniCartProps> = ({ isOpen, onClose, className }) => {
                           {product.name}
                         </Link>
                         
+                        {product.storeName && (
+                          <p className="text-xs text-gray-500 mt-0.5">
+                            {product.storeName}
+                          </p>
+                        )}
+                        
                         <div className="flex items-center gap-2 mt-1">
                           <span className="font-semibold text-sm">
                             ${currentPrice.toFixed(2)}

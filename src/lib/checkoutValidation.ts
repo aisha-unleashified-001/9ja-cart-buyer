@@ -22,6 +22,8 @@ export const validateBillingDetails = (details: BillingDetailsForm): ValidationE
     errors.push({ field: 'firstName', message: 'First name is required' });
   }
 
+  // lastName is optional since API only uses firstName
+
   if (!details.streetAddress.trim()) {
     errors.push({ field: 'streetAddress', message: 'Street address is required' });
   }

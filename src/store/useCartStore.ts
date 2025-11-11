@@ -98,6 +98,7 @@ export const useCartStore = create<CartStore>()((set, get) => ({
           bestseller: false
         },
         sellerId: apiItem.vendor,
+        storeName: apiItem.vendor, // Use vendor as storeName fallback
         createdAt: new Date(),
         updatedAt: new Date()
       } as Product,

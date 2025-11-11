@@ -7,9 +7,11 @@ interface OrderSummaryProps {
   subtotal: number;
   shipping: number;
   tax?: number;
+  discount?: number;
   total: number;
   showTitle?: boolean;
   compact?: boolean;
+  appliedCoupon?: string | null;
 }
 
 const OrderSummary: React.FC<OrderSummaryProps> = ({
@@ -17,9 +19,11 @@ const OrderSummary: React.FC<OrderSummaryProps> = ({
   subtotal,
   shipping,
   tax = 0,
+  discount = 0,
   total,
   showTitle = true,
-  compact = false
+  compact = false,
+  appliedCoupon = null
 }) => {
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('en-NG', {
@@ -59,6 +63,9 @@ const OrderSummary: React.FC<OrderSummaryProps> = ({
                     <h4 className="text-sm font-medium text-gray-900 truncate">
                       {product.name}
                     </h4>
+                    {product.storeName && (
+                      <p className="text-xs text-gray-500 truncate">{product.storeName}</p>
+                    )}
                     <p className="text-sm text-gray-500">Qty: {item.quantity}</p>
                   </div>
                   <div className="text-sm font-medium text-gray-900">
@@ -88,6 +95,15 @@ const OrderSummary: React.FC<OrderSummaryProps> = ({
             <div className="flex justify-between text-sm">
               <span className="text-gray-600">Tax:</span>
               <span className="font-medium">{formatPrice(tax)}</span>
+            </div>
+          )}
+
+          {discount > 0 && (
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-600">
+                Discount {appliedCoupon && `(${appliedCoupon})`}:
+              </span>
+              <span className="font-medium text-green-600">-{formatPrice(discount)}</span>
             </div>
           )}
           

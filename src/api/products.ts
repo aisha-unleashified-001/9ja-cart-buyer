@@ -24,6 +24,7 @@ export interface ApiProductData {
   minStock: string;
   images: string[];
   isActive: string;
+  storeName: string;
   createdAt: string;
   updatedAt: string;
 }

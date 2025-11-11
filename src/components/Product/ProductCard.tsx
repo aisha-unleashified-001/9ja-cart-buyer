@@ -270,8 +270,15 @@ const ProductCard: React.FC<ProductCardProps> = ({
 
           {/* Product Info */}
           <div className="p-3 sm:p-4 space-y-2 sm:space-y-3">
-            {/* Brand */}
-            {"brand" in product && product.brand && (
+            {/* Store Name */}
+            {product.storeName && (
+              <p className="text-xs text-gray-500 uppercase tracking-wide font-medium">
+                {product.storeName}
+              </p>
+            )}
+            
+            {/* Brand (fallback if no store name) */}
+            {!product.storeName && "brand" in product && product.brand && (
               <p className="text-xs text-gray-500 uppercase tracking-wide font-medium">
                 {product.brand}
               </p>

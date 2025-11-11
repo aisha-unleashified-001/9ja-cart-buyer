@@ -89,7 +89,12 @@ const CartItem: React.FC<CartItemProps> = ({
             >
               {product.name}
             </Link>
-            {product.brand && (
+            {product.storeName && (
+              <p className="text-sm text-gray-500 mt-1">
+                Sold by: <span className="font-medium">{product.storeName}</span>
+              </p>
+            )}
+            {!product.storeName && product.brand && (
               <p className="text-sm text-gray-500 mt-1">{product.brand}</p>
             )}
           </div>

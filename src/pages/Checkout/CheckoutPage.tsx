@@ -7,6 +7,8 @@ import { useCart } from '../../hooks/useCart';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useProfile } from '../../hooks/api/useProfile';
 import { validateBillingDetails, formatPhoneNumber, type BillingDetailsForm, type ValidationError } from '../../lib/checkoutValidation';
+import { orderApi, transformBillingDetails, transformCartItemsToOrderItems, mapPaymentMethodToApi } from '../../api/order';
+import { apiErrorUtils } from '../../utils/api-errors';
 import { cn } from '../../lib/utils';
 import type { UserAddress } from '../../types';
 
@@ -35,6 +37,12 @@ const CheckoutPage: React.FC = () => {
   const [showAddressSelector, setShowAddressSelector] = useState(false);
   const [selectedAddress, setSelectedAddress] = useState<UserAddress | null>(null);
   const [isAddingNewAddress, setIsAddingNewAddress] = useState(false);
+  
+  // Coupon state
+  const [couponCode, setCouponCode] = useState('');
+  const [appliedCoupon, setAppliedCoupon] = useState<string | null>(null);
+  const [couponDiscount, setCouponDiscount] = useState(0);
+  const [couponError, setCouponError] = useState<string | null>(null);
 
   const [billingDetails, setBillingDetails] = useState<BillingDetailsForm>({
     firstName: '',
@@ -116,7 +124,8 @@ const CheckoutPage: React.FC = () => {
 
   const subtotal = totalPrice;
   const shipping = 0; // Free shipping
-  const total = subtotal + shipping;
+  const discount = couponDiscount;
+  const total = subtotal + shipping - discount;
 
   // Address management functions
   const handleEditAddress = () => {
@@ -185,6 +194,42 @@ const CheckoutPage: React.FC = () => {
     }
   };
 
+  // Coupon handling functions
+  const handleApplyCoupon = () => {
+    if (!couponCode.trim()) {
+      setCouponError('Please enter a coupon code');
+      return;
+    }
+
+    setCouponError(null);
+    
+    // Mock coupon validation - replace with real API call
+    const mockCoupons: Record<string, number> = {
+      'SAVE1000': 1000,
+      'DISCOUNT500': 500,
+      'WELCOME200': 200,
+    };
+
+    const discount = mockCoupons[couponCode.toUpperCase()];
+    
+    if (discount) {
+      setAppliedCoupon(couponCode.toUpperCase());
+      setCouponDiscount(discount);
+      setCouponError(null);
+    } else {
+      setCouponError('Invalid coupon code');
+      setAppliedCoupon(null);
+      setCouponDiscount(0);
+    }
+  };
+
+  const handleRemoveCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponDiscount(0);
+    setCouponCode('');
+    setCouponError(null);
+  };
+
 
 
   const handleInputChange = (field: keyof BillingDetailsForm, value: string) => {
@@ -223,23 +268,60 @@ const CheckoutPage: React.FC = () => {
       return;
     }
 
+    if (!isAuthenticated) {
+      alert('Please sign in to place an order');
+      return;
+    }
+
     setIsProcessing(true);
+    setValidationErrors([]);
     
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Transform data for API
+      const billingData = transformBillingDetails(billingDetails);
+      const orderItems = transformCartItemsToOrderItems(items);
+      const paymentMethod = mapPaymentMethodToApi(selectedPayment);
+
+      // Prepare checkout request
+      const checkoutRequest = {
+        billing: billingData,
+        orderItems,
+        paymentMethod,
+        ...(appliedCoupon && { couponCode: appliedCoupon }),
+      };
+
+      console.log('🛒 Placing order with data:', checkoutRequest);
+
+      // Call checkout API
+      const response = await orderApi.checkout(checkoutRequest);
       
-      // Generate order number
-      const newOrderNumber = `ORD-${Date.now().toString().slice(-6)}`;
-      setOrderNumber(newOrderNumber);
-      
-      // Show success modal
-      setShowSuccess(true);
-      
-      // Clear cart
-      await clearAllItems();
+      if (response.data) {
+        // Set order details from API response
+        setOrderNumber(response.data.orderNumber);
+        
+        // Show success modal
+        setShowSuccess(true);
+        
+        // Clear cart
+        await clearAllItems();
+        
+        console.log('✅ Order placed successfully:', response.data);
+      } else {
+        throw new Error(response.message || 'Failed to place order');
+      }
     } catch (error) {
-      alert('Failed to place order. Please try again.');
+      console.error('❌ Checkout failed:', error);
+      
+      const errorMessage = apiErrorUtils.getErrorMessage(error);
+      
+      // Check if it's a validation error from API
+      if (error && typeof error === 'object' && 'status' in error && error.status === 400) {
+        alert(`Order validation failed: ${errorMessage}`);
+      } else if (error && typeof error === 'object' && 'status' in error && error.status === 401) {
+        alert('Please sign in again to place your order');
+      } else {
+        alert(`Failed to place order: ${errorMessage}`);
+      }
     } finally {
       setIsProcessing(false);
     }
@@ -256,6 +338,8 @@ const CheckoutPage: React.FC = () => {
       } 
     });
   };
+
+
 
   const breadcrumbItems = [
     { label: 'Account', href: '/account' },
@@ -442,6 +526,19 @@ const CheckoutPage: React.FC = () => {
                         {getFieldError('firstName')}
                       </div>
                     )}
+                  </div>
+
+                  {/* Last Name */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Last Name
+                    </label>
+                    <Input
+                      name="lastName"
+                      value={billingDetails.lastName}
+                      onChange={(e) => handleInputChange('lastName', e.target.value)}
+                      className="w-full"
+                    />
                   </div>
 
                   {/* Company Name */}
@@ -646,11 +743,72 @@ const CheckoutPage: React.FC = () => {
               items={items}
               subtotal={subtotal}
               shipping={shipping}
+              discount={discount}
               total={total}
+              appliedCoupon={appliedCoupon}
               showTitle={false}
             />
 
             
+            {/* Coupon Code Section */}
+            <Card className="mt-6">
+              <CardContent className="p-6">
+                <h3 className="text-lg font-medium text-gray-900 mb-4">Coupon Code</h3>
+                
+                {appliedCoupon ? (
+                  <div className="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                      <span className="text-sm font-medium text-green-800">
+                        Coupon "{appliedCoupon}" applied
+                      </span>
+                      <span className="text-sm text-green-600">
+                        (-{new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN' }).format(couponDiscount)})
+                      </span>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleRemoveCoupon}
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                    >
+                      Remove
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <div className="flex gap-2">
+                      <Input
+                        placeholder="Enter coupon code"
+                        value={couponCode}
+                        onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                        className="flex-1"
+                        onKeyPress={(e) => e.key === 'Enter' && handleApplyCoupon()}
+                      />
+                      <Button
+                        variant="outline"
+                        onClick={handleApplyCoupon}
+                        disabled={!couponCode.trim()}
+                      >
+                        Apply
+                      </Button>
+                    </div>
+                    
+                    {couponError && (
+                      <div className="flex items-center gap-2 text-sm text-red-600">
+                        <AlertCircle className="w-4 h-4" />
+                        {couponError}
+                      </div>
+                    )}
+                    
+                    <p className="text-xs text-muted-foreground">
+                      Try: SAVE1000, DISCOUNT500, WELCOME200
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
             <Card className="mt-6">
               <CardContent className="p-6">
                 {/* Payment Methods */}
@@ -693,6 +851,8 @@ const CheckoutPage: React.FC = () => {
                     ))}
                   </div>
                 </div>
+
+
 
                 {/* Place Order Button */}
                 <Button

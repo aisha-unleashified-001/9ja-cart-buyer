@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useParams} from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import {
   Star,
   Heart,
@@ -20,7 +20,7 @@ import {
   Alert,
   Image,
 } from "../../components/UI";
-import { useCartStore } from "../../store/useCartStore";
+import { useCart } from "../../hooks/useCart";
 import { useWishlistStore } from "../../store/useWishlistStore";
 import { useRealProduct, useRealProductsList } from "../../hooks/api/useRealProducts";
 // import type { Product } from "../../types";
@@ -29,7 +29,8 @@ import { ProductCard } from "@/components/Product";
 
 const ProductDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  const { addItem } = useCartStore();
+  const navigate = useNavigate();
+  const { addToCart } = useCart();
   const { addItem: addToWishlist, removeItem: removeFromWishlist, isItemInWishlist } = useWishlistStore();
 
   // Use real API hook
@@ -68,9 +69,15 @@ const ProductDetailPage: React.FC = () => {
     }
   }, [product]);
 
-  const handleAddToCart = () => {
+  const handleAddToCart = async () => {
     if (!product) return;
-    addItem(product, quantity);
+    await addToCart(product, quantity);
+  };
+
+  const handleCheckout = async () => {
+    if (!product) return;
+    await addToCart(product, quantity);
+    navigate("/checkout");
   };
 
   const handleQuantityChange = (change: number) => {
@@ -305,14 +312,24 @@ const ProductDetailPage: React.FC = () => {
                   </button>
                 </div>
 
-                <Button
-                  onClick={handleAddToCart}
-                  className="flex-1 bg-primary hover:bg-primary/90"
-                  size="lg"
-                >
-                  <ShoppingCart className="w-5 h-5 mr-2" />
-                  Buy Now
-                </Button>
+                <div className="flex gap-2 flex-1">
+                  <Button
+                    onClick={handleAddToCart}
+                    className="flex-1 bg-primary hover:bg-primary/90"
+                    size="lg"
+                  >
+                    <ShoppingCart className="w-5 h-5 mr-2" />
+                    Add to Cart
+                  </Button>
+
+                  <Button
+                    onClick={handleCheckout}
+                    className="flex-1 bg-primary hover:bg-primary/90"
+                    size="lg"
+                  >
+                    Checkout
+                  </Button>
+                </div>
 
                 <Button
                   variant="outline"

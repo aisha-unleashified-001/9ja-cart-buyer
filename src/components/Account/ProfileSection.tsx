@@ -3,6 +3,7 @@ import { Button, Input, Alert } from '../UI';
 import { useProfile } from '../../hooks/api/useProfile';
 import { profileUpdateSchema, passwordUpdateSchema } from '../../lib/validations';
 import type { ProfileUpdateData, PasswordUpdateData } from '../../types';
+import { Eye, EyeOff } from 'lucide-react';
 
 const ProfileSection: React.FC = () => {
   const { profile, isLoading, error, fetchProfile, updateProfile, updatePassword } = useProfile();
@@ -10,6 +11,9 @@ const ProfileSection: React.FC = () => {
   const [isUpdating, setIsUpdating] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   
   const [formData, setFormData] = useState({
     firstName: '',
@@ -242,14 +246,27 @@ const ProfileSection: React.FC = () => {
           <div className="space-y-4 max-w-md">
             <div className="space-y-2">
               <label className="text-sm font-medium text-foreground">Current Password</label>
-              <Input
-                name="currentPassword"
-                type="password"
-                value={formData.currentPassword}
-                onChange={handleInputChange}
-                placeholder="Enter current password"
-                className={`bg-muted ${validationErrors.currentPassword ? 'border-red-500' : ''}`}
-              />
+              <div className="relative">
+                <Input
+                  name="currentPassword"
+                  type={showCurrentPassword ? 'text' : 'password'}
+                  value={formData.currentPassword}
+                  onChange={handleInputChange}
+                  placeholder="Enter current password"
+                  className={`bg-muted pr-10 ${validationErrors.currentPassword ? 'border-red-500' : ''}`}
+                />
+                <button
+                  type="button"
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                  onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                >
+                  {showCurrentPassword ? (
+                    <EyeOff className="h-4 w-4 text-gray-400" />
+                  ) : (
+                    <Eye className="h-4 w-4 text-gray-400" />
+                  )}
+                </button>
+              </div>
               {validationErrors.currentPassword && (
                 <p className="text-sm text-red-600">{validationErrors.currentPassword}</p>
               )}
@@ -257,14 +274,27 @@ const ProfileSection: React.FC = () => {
 
             <div className="space-y-2">
               <label className="text-sm font-medium text-foreground">New Password</label>
-              <Input
-                name="newPassword"
-                type="password"
-                value={formData.newPassword}
-                onChange={handleInputChange}
-                placeholder="Enter new password"
-                className={`bg-muted ${validationErrors.newPassword ? 'border-red-500' : ''}`}
-              />
+              <div className="relative">
+                <Input
+                  name="newPassword"
+                  type={showNewPassword ? 'text' : 'password'}
+                  value={formData.newPassword}
+                  onChange={handleInputChange}
+                  placeholder="Enter new password"
+                  className={`bg-muted pr-10 ${validationErrors.newPassword ? 'border-red-500' : ''}`}
+                />
+                <button
+                  type="button"
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                  onClick={() => setShowNewPassword(!showNewPassword)}
+                >
+                  {showNewPassword ? (
+                    <EyeOff className="h-4 w-4 text-gray-400" />
+                  ) : (
+                    <Eye className="h-4 w-4 text-gray-400" />
+                  )}
+                </button>
+              </div>
               {validationErrors.newPassword && (
                 <p className="text-sm text-red-600">{validationErrors.newPassword}</p>
               )}
@@ -275,14 +305,27 @@ const ProfileSection: React.FC = () => {
 
             <div className="space-y-2">
               <label className="text-sm font-medium text-foreground">Confirm New Password</label>
-              <Input
-                name="confirmPassword"
-                type="password"
-                value={formData.confirmPassword}
-                onChange={handleInputChange}
-                placeholder="Confirm new password"
-                className={`bg-muted ${validationErrors.confirmNewPassword ? 'border-red-500' : ''}`}
-              />
+              <div className="relative">
+                <Input
+                  name="confirmPassword"
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  value={formData.confirmPassword}
+                  onChange={handleInputChange}
+                  placeholder="Confirm new password"
+                  className={`bg-muted pr-10 ${validationErrors.confirmNewPassword ? 'border-red-500' : ''}`}
+                />
+                <button
+                  type="button"
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                >
+                  {showConfirmPassword ? (
+                    <EyeOff className="h-4 w-4 text-gray-400" />
+                  ) : (
+                    <Eye className="h-4 w-4 text-gray-400" />
+                  )}
+                </button>
+              </div>
               {validationErrors.confirmNewPassword && (
                 <p className="text-sm text-red-600">{validationErrors.confirmNewPassword}</p>
               )}

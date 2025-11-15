@@ -7,32 +7,30 @@ import { Badge } from '../UI/Badge';
 import { cn } from '../../lib/utils';
 import { useWishlistStore, type WishlistItem } from '../../store/useWishlistStore';
 import { useCartStore } from '../../store/useCartStore';
+import { useAuthStore } from '../../store/useAuthStore';
 
 interface WishlistItemProps {
   item: WishlistItem;
 }
 
 const WishlistItemComponent: React.FC<WishlistItemProps> = ({ item }) => {
-  const { removeItem, moveToCart } = useWishlistStore();
+  const { removeItem } = useWishlistStore();
   const { addItem: addToCart, isItemInCart } = useCartStore();
+  const { isAuthenticated } = useAuthStore();
 
   const { product } = item;
   const currentPrice = typeof product.price === 'number' ? product.price : product.price.current;
   const originalPrice = typeof product.price === 'number' ? undefined : product.price.original;
   const discount = typeof product.price === 'number' ? undefined : product.price.discount;
   const isOnSale = originalPrice && originalPrice > currentPrice;
-  const isInCart = isItemInCart(product.id, false); // Default to guest cart for wishlist
+  const isInCart = isItemInCart(product.id, isAuthenticated);
 
   const handleRemoveFromWishlist = () => {
     removeItem(product.id);
   };
 
-  const handleMoveToCart = () => {
-    moveToCart(product.id, addToCart);
-  };
-
-  const handleAddToCart = () => {
-    addToCart(product);
+  const handleAddToCart = async () => {
+    await addToCart(product, 1, isAuthenticated);
   };
 
   const formatPrice = (price: number) => {
@@ -216,25 +214,14 @@ const WishlistItemComponent: React.FC<WishlistItemProps> = ({ item }) => {
               {/* Actions */}
               <div className="flex flex-col sm:flex-row gap-2 pt-4 border-t">
                 {product.inventory.inStock ? (
-                  <>
-                    <Button
-                      onClick={handleMoveToCart}
-                      disabled={isInCart}
-                      className="flex items-center gap-2 flex-1"
-                    >
-                      <ShoppingCart className="w-4 h-4" />
-                      {isInCart ? 'Already in Cart' : 'Move to Cart'}
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={handleAddToCart}
-                      disabled={isInCart}
-                      className="flex items-center gap-2"
-                    >
-                      <ShoppingCart className="w-4 h-4" />
-                      Add to Cart
-                    </Button>
-                  </>
+                  <Button
+                    onClick={handleAddToCart}
+                    disabled={isInCart}
+                    className="flex items-center gap-2 flex-1"
+                  >
+                    <ShoppingCart className="w-4 h-4" />
+                    {isInCart ? 'Already in Cart' : 'Add to Cart'}
+                  </Button>
                 ) : (
                   <Button
                     variant="outline"
@@ -250,9 +237,9 @@ const WishlistItemComponent: React.FC<WishlistItemProps> = ({ item }) => {
                   asChild
                   className="flex items-center gap-2"
                 >
-                  <Link to={`/products/${product.id}`}>
+                  <Link to={`/products/${product.id}`} className="flex items-center gap-2">
                     <Eye className="w-4 h-4" />
-                    View Details
+                    View Product
                   </Link>
                 </Button>
               </div>

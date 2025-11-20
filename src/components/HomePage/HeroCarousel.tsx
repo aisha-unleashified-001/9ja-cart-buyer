@@ -35,7 +35,7 @@ const HeroCarousel: React.FC<HeroCarouselProps> = ({
   return (
     <section className="lg:col-span-3 xl:col-span-4 relative overflow-hidden rounded-lg border border-gray-200 shadow-sm">
       {/* Slides */}
-      <div className={`relative ${height}`}>
+      <div className={`relative ${height} overflow-hidden`}>
         {slides.map((slide, idx) => (
           <div
             key={slide.id}
@@ -47,7 +47,7 @@ const HeroCarousel: React.FC<HeroCarouselProps> = ({
             <div className="grid grid-cols-1 md:grid-cols-2 h-full">
               {/* Content Side */}
               <div 
-                className="flex flex-col justify-center px-4 sm:px-6 lg:px-10 py-6 sm:py-8" 
+                className="flex flex-col justify-center px-4 sm:px-6 lg:px-10 py-6 sm:py-8 h-full" 
                 style={{ backgroundColor: slide.bg }}
               >
                 <div className="max-w-md">
@@ -65,7 +65,7 @@ const HeroCarousel: React.FC<HeroCarouselProps> = ({
               </div>
               
               {/* Image Side */}
-              <div className="relative bg-gradient-to-br from-gray-900 to-black overflow-hidden">
+              <div className="relative bg-gradient-to-br from-gray-900 to-black overflow-hidden h-full">
                 <img
                   src={slide.image}
                   alt={slide.title}

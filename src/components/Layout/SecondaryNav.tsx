@@ -6,18 +6,22 @@ import { useAllRealCategories } from '../../hooks/api/useRealCategories';
 const SecondaryNav: React.FC = () => {
   const { loading, getMainCategories } = useAllRealCategories();
   
-  // Show first 7 main categories to fit in navigation
+  // Show all main categories
   const mainCategories = getMainCategories();
-  const displayCategories = mainCategories.slice(0, 7);
+  const displayCategories = mainCategories;
+
+  // Count total items: 1 (All) + categories + 3 (special links)
+  const totalItems = 1 + displayCategories.length + 3;
+  const shouldScroll = totalItems > 10;
 
   return (
     <nav className="bg-muted text-muted-foreground border-t border-border">
       <div className="max-w-7xl mx-auto px-4">
-        <div className="flex items-center space-x-6 py-2 overflow-x-auto">
+        <div className={`flex items-center space-x-6 py-2 ${shouldScroll ? 'overflow-x-auto scrollbar-hide' : 'overflow-x-hidden'}`}>
           {/* All Categories */}
           <Link
             to="/products"
-            className="flex items-center whitespace-nowrap text-sm hover:text-primary transition-colors py-1"
+            className="flex items-center whitespace-nowrap text-sm hover:text-primary transition-colors py-1 flex-shrink-0"
           >
             <span className="font-medium">All</span>
           </Link>
@@ -27,7 +31,7 @@ const SecondaryNav: React.FC = () => {
             // Loading skeleton for categories
             Array.from({ length: 5 }).map((_, index) => (
               <React.Fragment key={`skeleton-${index}`}>
-                <div className="h-4 bg-gray-200 rounded w-16 animate-pulse"></div>
+                <div className="h-4 bg-gray-200 rounded w-16 animate-pulse flex-shrink-0"></div>
                 {index < 4 && (
                   <ChevronRight className="w-3 h-3 text-muted-foreground/50 flex-shrink-0" />
                 )}
@@ -38,7 +42,7 @@ const SecondaryNav: React.FC = () => {
               <React.Fragment key={category.slug}>
                 <Link
                   to={`/category/${category.id}`}
-                  className="whitespace-nowrap text-sm hover:text-primary transition-colors py-1"
+                  className="whitespace-nowrap text-sm hover:text-primary transition-colors py-1 flex-shrink-0"
                 >
                   {category.name}
                 </Link>
@@ -50,7 +54,7 @@ const SecondaryNav: React.FC = () => {
           )}
 
           {/* Special Links */}
-          <div className="flex items-center space-x-6 ml-auto">
+          <div className={`flex items-center space-x-6 ${shouldScroll ? '' : 'ml-auto'} flex-shrink-0`}>
             <Link
               to="/deals"
               className="whitespace-nowrap text-sm text-primary hover:text-primary/80 transition-colors py-1 font-medium"

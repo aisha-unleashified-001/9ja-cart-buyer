@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Breadcrumb, Loading, Alert } from '../../components/UI';
 import ProductCard from '../../components/Product/ProductCard';
 import { useRealProductsList } from '../../hooks/api/useRealProducts';
+import { normalizeProductImages } from '@/lib/utils';
 
 const ProductsPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -86,7 +87,7 @@ const ProductsPage: React.FC = () => {
               {products.map((product) => (
                 <ProductCard 
                   key={product.id} 
-                  product={product}
+                  product={normalizeProductImages(product)}
                   showQuickAdd={true}
                   className="w-full"
                 />

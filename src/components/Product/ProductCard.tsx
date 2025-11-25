@@ -251,8 +251,12 @@ const ProductCard: React.FC<ProductCardProps> = ({
                 <div className="absolute inset-0 bg-gray-100 animate-pulse" />
               )}
               <Image
-                src={product.images.main}
-                alt={product.images.alt}
+                src={
+                  Array.isArray(product.images)
+                    ? product.images[0]
+                    : product.images.main
+                }
+                alt={product.name || "Product image"}
                 className={cn(
                   "w-full h-full object-cover transition-all duration-300",
                   "group-hover:scale-105",

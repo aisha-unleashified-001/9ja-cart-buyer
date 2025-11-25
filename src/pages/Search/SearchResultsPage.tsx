@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { Breadcrumb, Loading, Alert } from "../../components/UI";
 import ProductCard from "../../components/Product/ProductCard";
 import { useRealProductsList } from "../../hooks/api/useRealProducts";
+import { normalizeProductImages } from "@/lib/utils";
 
 const SearchResultsPage: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -94,7 +95,7 @@ const SearchResultsPage: React.FC = () => {
               {products.map((product) => (
                 <ProductCard
                   key={product.id}
-                  product={product}
+                  product={normalizeProductImages(product)}
                   showQuickAdd={true}
                   className="w-full"
                 />

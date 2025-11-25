@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import { Breadcrumb, Loading, Alert } from '../../components/UI';
 import ProductCard from '../../components/Product/ProductCard';
 import { useRealProductsByCategory } from '../../hooks/api/useRealProducts';
+import { normalizeProductImages } from '@/lib/utils';
 
 const CategoryPage: React.FC = () => {
   const { categoryId } = useParams<{ categoryId: string }>();
@@ -86,7 +87,7 @@ const CategoryPage: React.FC = () => {
               {products.map((product) => (
                 <ProductCard 
                   key={product.id} 
-                  product={product}
+                  product={normalizeProductImages(product)}
                   showQuickAdd={true}
                   className="w-full"
                 />

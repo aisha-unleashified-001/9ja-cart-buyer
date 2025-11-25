@@ -4,6 +4,7 @@ import { ChevronRight, Loader2 } from 'lucide-react';
 import { Button, Alert } from '../UI';
 import ProductCard from '../Product/ProductCard';
 import { useRealProductsList } from '../../hooks/api/useRealProducts';
+import { normalizeProductImages } from '@/lib/utils';
 
 const LiveProducts: React.FC = () => {
   const { products, loading, error, refetch, pagination } = useRealProductsList({ page: 1, perPage: 100 }); // Fetch all products
@@ -95,7 +96,7 @@ const LiveProducts: React.FC = () => {
           {products.map((product) => (
             <ProductCard
               key={product.id}
-              product={product}
+              product={normalizeProductImages(product)}
               showQuickAdd={true}
               className="h-full"
             />

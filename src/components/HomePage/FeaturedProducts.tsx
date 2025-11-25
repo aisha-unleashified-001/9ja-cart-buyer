@@ -1,26 +1,38 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
-import { ChevronRight, Loader2 } from 'lucide-react';
-import { Button, Alert } from '../UI';
-import ProductCard from '../Product/ProductCard';
-import { useFeaturedProducts } from '../../hooks/api/useRealProducts';
+import React from "react";
+import { Link } from "react-router-dom";
+import { ChevronRight, Loader2 } from "lucide-react";
+import { Button, Alert } from "../UI";
+import ProductCard from "../Product/ProductCard";
+import { useFeaturedProducts } from "../../hooks/api/useRealProducts";
+import { normalizeProductImages } from "@/lib/utils";
 
 const FeaturedProducts: React.FC = () => {
   // Get featured products from real API
-  const { products: featuredProducts, loading, error, refetch } = useFeaturedProducts(8);
+  const {
+    products: featuredProducts,
+    loading,
+    error,
+    refetch,
+  } = useFeaturedProducts(8);
 
   if (loading) {
     return (
       <section className="py-16 bg-gray-50">
         <div className="max-w-7xl mx-auto px-4">
           <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-foreground mb-4">Featured Products</h2>
-            <p className="text-muted-foreground">Loading our handpicked selection of premium items</p>
+            <h2 className="text-3xl font-bold text-foreground mb-4">
+              Featured Products
+            </h2>
+            <p className="text-muted-foreground">
+              Loading our handpicked selection of premium items
+            </p>
           </div>
-          
+
           <div className="flex items-center justify-center py-12">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            <span className="ml-2 text-muted-foreground">Loading featured products...</span>
+            <span className="ml-2 text-muted-foreground">
+              Loading featured products...
+            </span>
           </div>
         </div>
       </section>
@@ -32,10 +44,14 @@ const FeaturedProducts: React.FC = () => {
       <section className="py-16 bg-gray-50">
         <div className="max-w-7xl mx-auto px-4">
           <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-foreground mb-4">Featured Products</h2>
-            <p className="text-muted-foreground">Error loading our featured products</p>
+            <h2 className="text-3xl font-bold text-foreground mb-4">
+              Featured Products
+            </h2>
+            <p className="text-muted-foreground">
+              Error loading our featured products
+            </p>
           </div>
-          
+
           <Alert variant="destructive" className="max-w-md mx-auto">
             <div className="flex flex-col items-center gap-4">
               <p>{error}</p>
@@ -55,12 +71,19 @@ const FeaturedProducts: React.FC = () => {
         {/* Section Header */}
         <div className="flex items-center justify-between mb-12">
           <div>
-            <h2 className="text-3xl font-bold text-foreground mb-4">Featured Products</h2>
-            <p className="text-muted-foreground">Discover our handpicked selection of premium items</p>
+            <h2 className="text-3xl font-bold text-foreground mb-4">
+              Featured Products
+            </h2>
+            <p className="text-muted-foreground">
+              Discover our handpicked selection of premium items
+            </p>
           </div>
-          
+
           <Link to="/products">
-            <Button variant="outline" className="hidden sm:flex items-center gap-2">
+            <Button
+              variant="outline"
+              className="hidden sm:flex items-center gap-2"
+            >
               View All Products
               <ChevronRight className="h-4 w-4" />
             </Button>
@@ -72,7 +95,7 @@ const FeaturedProducts: React.FC = () => {
           {featuredProducts.map((product) => (
             <ProductCard
               key={product.id}
-              product={product}
+              product={normalizeProductImages(product)}
               showQuickAdd={true}
               className="h-full"
             />

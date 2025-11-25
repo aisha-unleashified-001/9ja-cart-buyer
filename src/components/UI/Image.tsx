@@ -1,5 +1,5 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { cn } from '../../lib/utils';
+import React, { useState, useRef, useEffect } from "react";
+import { cn } from "../../lib/utils";
 
 interface ImageProps extends React.ImgHTMLAttributes<HTMLImageElement> {
   src: string;
@@ -7,8 +7,8 @@ interface ImageProps extends React.ImgHTMLAttributes<HTMLImageElement> {
   fallback?: string;
   placeholder?: string;
   lazy?: boolean;
-  aspectRatio?: 'square' | '16/9' | '4/3' | '3/2' | 'auto';
-  objectFit?: 'cover' | 'contain' | 'fill' | 'none' | 'scale-down';
+  aspectRatio?: "square" | "16/9" | "4/3" | "3/2" | "auto";
+  objectFit?: "cover" | "contain" | "fill" | "none" | "scale-down";
   blur?: boolean;
   onLoad?: () => void;
   onError?: () => void;
@@ -17,11 +17,11 @@ interface ImageProps extends React.ImgHTMLAttributes<HTMLImageElement> {
 const Image: React.FC<ImageProps> = ({
   src,
   alt,
-  fallback = '/placeholder-image.jpg',
+  fallback = "/placeholder-image.jpg",
   placeholder,
   lazy = true,
-  aspectRatio = 'auto',
-  objectFit = 'cover',
+  aspectRatio = "auto",
+  objectFit = "cover",
   blur = true,
   className,
   onLoad,
@@ -32,7 +32,7 @@ const Image: React.FC<ImageProps> = ({
   const [hasError, setHasError] = useState(false);
   const [isInView, setIsInView] = useState(!lazy);
   const imgRef = useRef<HTMLImageElement>(null);
-  const [currentSrc, setCurrentSrc] = useState(placeholder || '');
+  const [currentSrc, setCurrentSrc] = useState(placeholder || "");
 
   // Intersection Observer for lazy loading
   useEffect(() => {
@@ -56,11 +56,21 @@ const Image: React.FC<ImageProps> = ({
   }, [lazy, isInView]);
 
   // Update src when in view
+  // useEffect(() => {
+  //   if (isInView && !hasError) {
+  //     // If src is empty or whitespace, use fallback
+  //     setCurrentSrc(src && src.trim() ? src : fallback);
+  //   }
+  // }, [isInView, src, hasError, fallback]);
+
   useEffect(() => {
-    if (isInView && !hasError) {
-      // If src is empty or whitespace, use fallback
-      setCurrentSrc(src && src.trim() ? src : fallback);
-    }
+    if (!isInView || hasError) return;
+
+    // ensure src is a valid string
+    const validSrc =
+      typeof src === "string" && src.trim().length > 0 ? src : fallback;
+
+    setCurrentSrc(validSrc);
   }, [isInView, src, hasError, fallback]);
 
   const handleLoad = () => {
@@ -76,25 +86,25 @@ const Image: React.FC<ImageProps> = ({
   };
 
   const aspectRatioClasses = {
-    square: 'aspect-square',
-    '16/9': 'aspect-video',
-    '4/3': 'aspect-[4/3]',
-    '3/2': 'aspect-[3/2]',
-    auto: '',
+    square: "aspect-square",
+    "16/9": "aspect-video",
+    "4/3": "aspect-[4/3]",
+    "3/2": "aspect-[3/2]",
+    auto: "",
   };
 
   const objectFitClasses = {
-    cover: 'object-cover',
-    contain: 'object-contain',
-    fill: 'object-fill',
-    none: 'object-none',
-    'scale-down': 'object-scale-down',
+    cover: "object-cover",
+    contain: "object-contain",
+    fill: "object-fill",
+    none: "object-none",
+    "scale-down": "object-scale-down",
   };
 
   return (
     <div
       className={cn(
-        'relative overflow-hidden bg-gray-100',
+        "relative overflow-hidden bg-gray-100",
         aspectRatioClasses[aspectRatio],
         className
       )}
@@ -109,17 +119,17 @@ const Image: React.FC<ImageProps> = ({
       {/* Main image */}
       <img
         ref={imgRef}
-        src={currentSrc || fallback}
+        src={typeof currentSrc === "string" ? currentSrc : fallback}
         alt={alt}
         className={cn(
-          'w-full h-full transition-all duration-300',
+          "w-full h-full transition-all duration-300",
           objectFitClasses[objectFit],
-          isLoading && blur ? 'blur-sm scale-105' : 'blur-0 scale-100',
-          isLoading ? 'opacity-0' : 'opacity-100'
+          isLoading && blur ? "blur-sm scale-105" : "blur-0 scale-100",
+          isLoading ? "opacity-0" : "opacity-100"
         )}
         onLoad={handleLoad}
         onError={handleError}
-        loading={lazy ? 'lazy' : 'eager'}
+        loading={lazy ? "lazy" : "eager"}
         {...props}
       />
 

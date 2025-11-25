@@ -24,7 +24,7 @@ import { useCart } from "../../hooks/useCart";
 import { useWishlistStore } from "../../store/useWishlistStore";
 import { useRealProduct, useRealProductsList } from "../../hooks/api/useRealProducts";
 // import type { Product } from "../../types";
-import { cn } from "../../lib/utils";
+import { cn, normalizeProductImages } from "../../lib/utils";
 import { ProductCard } from "@/components/Product";
 
 const ProductDetailPage: React.FC = () => {
@@ -397,7 +397,7 @@ const ProductDetailPage: React.FC = () => {
                 .map((relatedProduct) => (
                   <ProductCard
                     key={relatedProduct.id}
-                    product={relatedProduct}
+                    product={normalizeProductImages(relatedProduct)}
                     className="group cursor-pointer hover:shadow-lg transition-shadow"
                   />
                 ))}

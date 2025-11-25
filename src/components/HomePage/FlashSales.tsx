@@ -6,6 +6,7 @@ import { ProductCard } from "../Product";
 import { Button, Alert } from "../UI";
 import { Link } from "react-router-dom";
 import { Loader2 } from "lucide-react";
+import { normalizeProductImages } from "@/lib/utils";
 
 export default function FlashSales() {
   // Get products from real API and filter for discounts
@@ -92,7 +93,7 @@ export default function FlashSales() {
               {flashSaleProducts.map((product) => (
                 <ProductCard
                   key={product.id}
-                  product={product}
+                  product={normalizeProductImages(product)}
                   className="w-full"
                 />
               ))}

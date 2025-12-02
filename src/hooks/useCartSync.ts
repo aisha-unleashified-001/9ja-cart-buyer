@@ -16,27 +16,13 @@ export const useCartSync = () => {
     isAuthenticated: false,
     userId: null,
   });
-  const hasInitialized = useRef(false);
-
-  // Load cart on initial mount if user is authenticated
-  useEffect(() => {
-    if (!hasInitialized.current && isAuthenticated && user) {
-      hasInitialized.current = true;
-      console.log('🔄 Initial load: User is authenticated, loading cart...');
-      loadServerCart().catch(console.error);
-      prevAuthState.current = {
-        isAuthenticated: true,
-        userId: user.id || null,
-      };
-    }
-  }, [isAuthenticated, user, loadServerCart]);
 
   useEffect(() => {
     const currentUserId = user?.id || null;
     const prevState = prevAuthState.current;
     
-    // Only act on actual auth state changes (skip initial mount)
-    if (hasInitialized.current && (prevState.isAuthenticated !== isAuthenticated || prevState.userId !== currentUserId)) {
+    // Only act on actual auth state changes
+    if (prevState.isAuthenticated !== isAuthenticated || prevState.userId !== currentUserId) {
       console.log('🔄 Auth state changed:', { 
         wasAuth: prevState.isAuthenticated, 
         nowAuth: isAuthenticated,

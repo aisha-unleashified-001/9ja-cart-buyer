@@ -55,8 +55,7 @@ const CartPage: React.FC = () => {
     }
   };
 
-  // Show empty cart only if not loading and items are actually empty
-  if (!isLoading && items.length === 0) {
+  if (items.length === 0) {
     return (
       <div className="min-h-screen bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 py-8">
@@ -169,28 +168,17 @@ const CartPage: React.FC = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
           {/* Cart Items */}
           <div className="lg:col-span-2 space-y-4">
-            {isLoading && items.length === 0 ? (
-              <Card>
-                <CardContent className="p-12 text-center">
-                  <div className="flex flex-col items-center justify-center">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-4"></div>
-                    <p className="text-gray-600">Loading your cart...</p>
-                  </div>
+            {items.map((item) => (
+              <Card key={item.id}>
+                <CardContent className="p-0">
+                  <CartItem
+                    item={item}
+                    onRemove={handleRemoveItem}
+                    isRemoving={removingItemId === item.product.id}
+                  />
                 </CardContent>
               </Card>
-            ) : (
-              items.map((item) => (
-                <Card key={item.id}>
-                  <CardContent className="p-0">
-                    <CartItem
-                      item={item}
-                      onRemove={handleRemoveItem}
-                      isRemoving={removingItemId === item.product.id}
-                    />
-                  </CardContent>
-                </Card>
-              ))
-            )}
+            ))}
 
             {/* Continue Shopping */}
             <Card>

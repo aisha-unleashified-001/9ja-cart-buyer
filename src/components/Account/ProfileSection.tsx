@@ -3,7 +3,7 @@ import { Button, Input, Alert } from '../UI';
 import { useProfile } from '../../hooks/api/useProfile';
 import { profileUpdateSchema, passwordUpdateSchema } from '../../lib/validations';
 import type { ProfileUpdateData, PasswordUpdateData } from '../../types';
-import { Eye, EyeOff, Trash2 } from 'lucide-react';
+import { Eye, EyeOff } from 'lucide-react';
 
 const ProfileSection: React.FC = () => {
   const { profile, isLoading, error, fetchProfile, updateProfile, updatePassword } = useProfile();
@@ -139,13 +139,6 @@ const ProfileSection: React.FC = () => {
     setSuccessMessage('');
   };
 
-  const handleDeleteAddress = async (addressId: string) => {
-    // TODO: Implement delete address functionality when endpoint is provided
-    console.log('Delete address:', addressId);
-    // await deleteAddress(addressId);
-    // await fetchProfile();
-  };
-
   // Show loading state
   if (isLoading && !profile) {
     return (
@@ -233,20 +226,12 @@ const ProfileSection: React.FC = () => {
             <label className="text-sm font-medium text-foreground">Addresses</label>
             <div className="space-y-2">
               {profile.addresses.map((address) => (
-                <div key={address.id} className="p-3 bg-muted rounded-md text-sm relative">
+                <div key={address.id} className="p-3 bg-muted rounded-md text-sm">
                   <div className="font-medium">{address.streetAddress}</div>
                   <div className="text-muted-foreground">
                     {address.city}, {address.state} {address.zipCode}, {address.country}
                     {address.isDefault && <span className="ml-2 text-primary">(Default)</span>}
                   </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleDeleteAddress(address.id)}
-                    className="absolute top-2 right-2 text-destructive hover:text-destructive"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
                 </div>
               ))}
             </div>

@@ -150,11 +150,6 @@ const WishlistItemComponent: React.FC<WishlistItemProps> = ({ item }) => {
                     >
                       {product.name}
                     </Link>
-                    {product.storeName && (
-                      <p className="text-sm text-muted-foreground mt-1">
-                        <span className="font-medium">{product.storeName}</span>
-                      </p>
-                    )}
                     {product.brand && (
                       <p className="text-sm text-muted-foreground mt-1 uppercase tracking-wide">
                         {product.brand}

@@ -18,17 +18,46 @@ const AddressSelector: React.FC<AddressSelectorProps> = ({
   onAddNew,
   onCancel,
 }) => {
+  const shouldScroll = addresses.length > 6;
+  
   return (
-    <Card>
-      <CardContent className="p-4">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="font-medium text-foreground">Choose Address</h3>
-          <Button variant="ghost" size="sm" onClick={onCancel}>
-            Cancel
-          </Button>
-        </div>
-        
-        <div className="space-y-3">
+    <>
+      <style>{`
+        .address-selector-scrollable {
+          max-height: 420px !important;
+          overflow-y: auto !important;
+          overflow-x: hidden !important;
+          padding-right: 8px !important;
+          scrollbar-width: thin;
+          scrollbar-color: #cbd5e1 #f1f5f9;
+        }
+        .address-selector-scrollable::-webkit-scrollbar {
+          width: 8px;
+        }
+        .address-selector-scrollable::-webkit-scrollbar-track {
+          background: #f1f5f9;
+          border-radius: 4px;
+        }
+        .address-selector-scrollable::-webkit-scrollbar-thumb {
+          background: #cbd5e1;
+          border-radius: 4px;
+        }
+        .address-selector-scrollable::-webkit-scrollbar-thumb:hover {
+          background: #94a3b8;
+        }
+      `}</style>
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-medium text-foreground">Choose Address</h3>
+            <Button variant="ghost" size="sm" onClick={onCancel}>
+              Cancel
+            </Button>
+          </div>
+          
+          <div 
+            className={`space-y-3 ${shouldScroll ? 'address-selector-scrollable' : ''}`}
+          >
           {addresses.map((address) => (
             <div
               key={address.id}
@@ -88,6 +117,7 @@ const AddressSelector: React.FC<AddressSelectorProps> = ({
         </div>
       </CardContent>
     </Card>
+    </>
   );
 };
 

@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 import type { Product, CartItem } from '../types';
 import { cartApi, type ApiCartItem } from '../api/cart';
 import { productsApi } from '../api/products';
@@ -6,7 +7,7 @@ import { apiErrorUtils } from '../utils/api-errors';
 import { ApiError } from '../api/client';
 
 interface CartStore {
-  // Guest cart data (in-memory only)
+  // Guest cart data (persisted to localStorage)
   guestItems: CartItem[];
   
   // Authenticated cart data (from server)
@@ -16,6 +17,9 @@ interface CartStore {
   isOpen: boolean;
   isLoading: boolean;
   error: string | null;
+  
+  // Migration state
+  isMigrating: boolean;
   
   // Core methods
   addItem: (product: Product, quantity?: number, isAuthenticated?: boolean) => Promise<void>;
@@ -45,13 +49,16 @@ interface CartStore {
   _mapApiItemToCartItem: (apiItem: ApiCartItem, product?: Product) => CartItem;
 }
 
-export const useCartStore = create<CartStore>()((set, get) => ({
+export const useCartStore = create<CartStore>()(
+  persist(
+    (set, get) => ({
   // Initial state
   guestItems: [],
   serverItems: [],
   isOpen: false,
   isLoading: false,
   error: null,
+  isMigrating: false,
 
   // Helper to map API items to cart items
   _mapApiItemToCartItem: (apiItem: ApiCartItem, product?: Product): CartItem => {
@@ -366,49 +373,177 @@ export const useCartStore = create<CartStore>()((set, get) => ({
 
   // Migrate guest cart to server on login
   migrateGuestCartOnLogin: async () => {
-    const { guestItems } = get();
+    // Prevent concurrent migrations
+    const { isMigrating } = get();
+    if (isMigrating) {
+      console.log('⚠️ Migration already in progress, skipping...');
+      return;
+    }
+
+    // Capture guest items at the start to prevent race conditions
+    const { guestItems: initialGuestItems } = get();
     
-    console.log('🔄 Starting cart migration. Guest items:', guestItems.length);
+    console.log('🔄 Starting cart migration. Guest items:', initialGuestItems.length);
     
-    if (guestItems.length === 0) {
+    if (initialGuestItems.length === 0) {
       // No guest cart to migrate, just load server cart
       console.log('📦 No guest items, loading server cart...');
-      await get().loadServerCart();
+      try {
+        set({ isLoading: true, error: null });
+        await get().loadServerCart();
+        set({ isLoading: false });
+      } catch (error) {
+        console.error('❌ Failed to load server cart:', error);
+        set({ 
+          isLoading: false, 
+          error: apiErrorUtils.getErrorMessage(error)
+        });
+      }
       return;
     }
 
     try {
-      set({ isLoading: true, error: null });
+      set({ isLoading: true, isMigrating: true, error: null });
       
-      console.log('📤 Migrating guest cart items to server...');
-      // Add each guest cart item to server
-      for (const item of guestItems) {
+      // Step 1: Load existing server cart first (if possible)
+      let serverItems: CartItem[] = [];
+      try {
+        console.log('📥 Loading existing server cart...');
+        await get().loadServerCart();
+        serverItems = get().serverItems;
+        console.log(`📥 Loaded ${serverItems.length} items from server cart`);
+      } catch (loadError) {
+        console.warn('⚠️ Failed to load server cart, will add guest items as new items:', loadError);
+        // Continue with migration - we'll add all guest items as new items
+      }
+
+      // Step 2: Merge guest items with server items
+      // Use the captured guest items to prevent issues if state changes during migration
+      console.log('🔄 Merging guest cart with server cart...');
+      const itemsToAdd: Array<{ productId: string; quantity: number }> = [];
+      const itemsToUpdate: Array<{ cartItemId: string; quantity: number }> = [];
+      
+      for (const guestItem of initialGuestItems) {
+        const existingServerItem = serverItems.find(
+          serverItem => serverItem.product.id === guestItem.product.id
+        );
+        
+        if (existingServerItem) {
+          // Product exists in both carts - combine quantities
+          const combinedQuantity = existingServerItem.quantity + guestItem.quantity;
+          console.log(
+            `🔄 Merging: ${guestItem.product.name} ` +
+            `(server: ${existingServerItem.quantity} + guest: ${guestItem.quantity} = ${combinedQuantity})`
+          );
+          
+          if (existingServerItem.cartItemId) {
+            itemsToUpdate.push({
+              cartItemId: existingServerItem.cartItemId,
+              quantity: combinedQuantity
+            });
+          } else {
+            // Fallback: if no cartItemId, add as new item
+            itemsToAdd.push({
+              productId: guestItem.product.id,
+              quantity: combinedQuantity
+            });
+          }
+        } else {
+          // New product - add it
+          console.log(`➕ Adding new item: ${guestItem.product.name} (qty: ${guestItem.quantity})`);
+          itemsToAdd.push({
+            productId: guestItem.product.id,
+            quantity: guestItem.quantity
+          });
+        }
+      }
+      
+      // Step 3: Sync merged items to server
+      console.log(`📤 Syncing ${itemsToUpdate.length} updates and ${itemsToAdd.length} new items to server...`);
+      
+      // Update existing items with combined quantities
+      for (const update of itemsToUpdate) {
         try {
-          console.log(`📤 Migrating: ${item.product.name} (qty: ${item.quantity})`);
-          await cartApi.addItem({
-            productId: item.product.id,
-            quantity: item.quantity
+          await cartApi.updateItem({
+            cartItemId: update.cartItemId,
+            quantity: update.quantity
           });
         } catch (error) {
-          console.error(`❌ Failed to migrate ${item.product.name}:`, error);
+          console.error(`❌ Failed to update cart item ${update.cartItemId}:`, error);
           // Continue with other items
         }
       }
       
-      console.log('📥 Loading merged cart from server...');
-      // Load the merged cart from server
+      // Add new items - reload cart after updates to get latest state
+      // The server's addItem API might auto-merge quantities, so we need to check before each add
       await get().loadServerCart();
       
-      // Clear guest cart after successful migration
-      set({ guestItems: [] });
+      for (const add of itemsToAdd) {
+        try {
+          // Reload cart to get latest state (in case previous adds changed it)
+          await get().loadServerCart();
+          const currentServerItems = get().serverItems;
+          
+          // Check if item already exists in server cart
+          // (might have been added by previous migration attempt or auto-merged by server)
+          const existingItem = currentServerItems.find(
+            item => item.product.id === add.productId
+          );
+          
+          if (existingItem && existingItem.cartItemId) {
+            // Item already exists - this shouldn't happen for new items, but handle it
+            // The server's addItem might have auto-merged, or migration ran twice
+            console.log(
+              `⚠️ Item ${add.productId} already exists in server cart ` +
+              `(qty: ${existingItem.quantity}), skipping add to avoid duplication`
+            );
+            // Don't add or update - item already exists, migration might have run twice
+            // The quantity should already be correct from the first migration
+          } else {
+            // Item doesn't exist - safe to add
+            console.log(`➕ Adding new item: ${add.productId} (qty: ${add.quantity})`);
+            await cartApi.addItem({
+              productId: add.productId,
+              quantity: add.quantity
+            });
+          }
+        } catch (error) {
+          console.error(`❌ Failed to add/update product ${add.productId}:`, error);
+          // Continue with other items
+        }
+      }
       
-      console.log('✅ Cart migration completed successfully');
+      // Step 4: Reload merged cart from server
+      console.log('📥 Loading final merged cart from server...');
+      await get().loadServerCart();
+      
+      // Step 5: Clear guest cart only after successful migration
+      // Double-check that we still have the same guest items (prevent clearing if migration was called multiple times)
+      const currentGuestItems = get().guestItems;
+      if (currentGuestItems.length === initialGuestItems.length) {
+        set({ 
+          guestItems: [],
+          isLoading: false,
+          isMigrating: false
+        });
+        console.log('✅ Cart migration completed successfully. Guest cart cleared.');
+      } else {
+        console.warn('⚠️ Guest cart changed during migration, not clearing to preserve new items');
+        set({ 
+          isLoading: false,
+          isMigrating: false
+        });
+      }
     } catch (error) {
       console.error('❌ Failed to migrate guest cart:', error);
+      // Don't clear guest items on error - they should be preserved for retry
       set({ 
-        isLoading: false, 
+        isLoading: false,
+        isMigrating: false,
         error: apiErrorUtils.getErrorMessage(error)
       });
+      // Re-throw to allow caller to handle
+      throw error;
     }
   },
 
@@ -481,4 +616,14 @@ export const useCartStore = create<CartStore>()((set, get) => ({
     const item = items.find(item => item.product.id === productId);
     return item ? item.quantity : 0;
   },
-}));
+    }),
+    {
+      name: 'cart-storage',
+      // Only persist guest items and UI state
+      partialize: (state) => ({
+        guestItems: state.guestItems,
+        isOpen: state.isOpen,
+      }),
+    }
+  )
+);

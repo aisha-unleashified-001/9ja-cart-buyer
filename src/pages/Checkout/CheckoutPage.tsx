@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import {
   CreditCard,
@@ -57,6 +57,7 @@ const CheckoutPage: React.FC = () => {
     useProfile();
 
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isRedirectingToPayment, setIsRedirectingToPayment] = useState(false);
   const [saveInfo, setSaveInfo] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState("cash-on-delivery");
   const [showSuccess, setShowSuccess] = useState(false);
@@ -72,8 +73,9 @@ const CheckoutPage: React.FC = () => {
   const [selectedAddress, setSelectedAddress] = useState<UserAddress | null>(
     null
   );
-  const [isAddingNewAddress, setIsAddingNewAddress] = useState(false);
   const [addressSavedSuccess, setAddressSavedSuccess] = useState(false);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
+  const justSavedAddressRef = useRef(false);
 
   // Coupon state
   const [couponCode, setCouponCode] = useState("");
@@ -101,40 +103,49 @@ const CheckoutPage: React.FC = () => {
 
   // Set up default address and pre-fill form
   useEffect(() => {
+    // Skip if we just saved an address - preserve current form values
+    if (justSavedAddressRef.current) {
+      justSavedAddressRef.current = false;
+      return;
+    }
+
     if (isAuthenticated && profile) {
       const defaultAddress = getDefaultAddress();
 
-      if (defaultAddress) {
+      if (defaultAddress && isInitialLoad) {
         setSelectedAddress(defaultAddress);
         // Auto-fill form with default address - ensure all required fields are populated
         setBillingDetails((prev) => ({
           ...prev,
-          firstName: user?.firstName || profile.firstName || "",
-          lastName: user?.lastName || profile.lastName || "",
-          emailAddress: user?.email || profile.email || "",
-          phoneNumber: user?.phone || profile.phone || "",
-          streetAddress: defaultAddress.streetAddress || "",
-          townCity: defaultAddress.city || "",
+          firstName: user?.firstName || profile.firstName || prev.firstName || "",
+          lastName: user?.lastName || profile.lastName || prev.lastName || "",
+          emailAddress: user?.email || profile.email || prev.emailAddress || "",
+          phoneNumber: user?.phone || profile.phone || prev.phoneNumber || "",
+          streetAddress: defaultAddress.streetAddress || prev.streetAddress || "",
+          townCity: defaultAddress.city || prev.townCity || "",
           apartment: prev.apartment || "",
-          companyName: "",
+          companyName: prev.companyName || "",
         }));
         setShowAddressForm(false); // Hide form since we have default address
-      } else {
+        setIsInitialLoad(false);
+      } else if (isInitialLoad) {
         // No default address, show form
         setShowAddressForm(true);
         setBillingDetails((prev) => ({
           ...prev,
-          firstName: user?.firstName || profile.firstName || "",
-          lastName: user?.lastName || profile.lastName || "",
-          emailAddress: user?.email || profile.email || "",
-          phoneNumber: user?.phone || profile.phone || "",
+          firstName: user?.firstName || profile.firstName || prev.firstName || "",
+          lastName: user?.lastName || profile.lastName || prev.lastName || "",
+          emailAddress: user?.email || profile.email || prev.emailAddress || "",
+          phoneNumber: user?.phone || profile.phone || prev.phoneNumber || "",
         }));
+        setIsInitialLoad(false);
       }
     } else if (!isAuthenticated && checkoutAsGuest) {
       // Guest checkout - always show form
       setShowAddressForm(true);
+      setIsInitialLoad(false);
     }
-  }, [isAuthenticated, profile, user, checkoutAsGuest, getDefaultAddress]);
+  }, [isAuthenticated, profile, user, checkoutAsGuest, getDefaultAddress, isInitialLoad]);
 
   const paymentMethods: PaymentMethod[] = [
     {
@@ -169,6 +180,16 @@ const CheckoutPage: React.FC = () => {
     setShowAddressForm(true);
     setShowAddressSelector(false);
     setAddressSavedSuccess(false);
+    // Ensure form is populated with current selected address data
+    if (selectedAddress) {
+      setBillingDetails((prev) => ({
+        ...prev,
+        // Preserve all existing form values (phone, email, etc.)
+        streetAddress: selectedAddress.streetAddress || prev.streetAddress || "",
+        townCity: selectedAddress.city || prev.townCity || "",
+        // Keep all other fields as they are
+      }));
+    }
   };
 
   const handleChangeAddress = () => {
@@ -179,15 +200,18 @@ const CheckoutPage: React.FC = () => {
 
   const handleSelectAddress = (address: UserAddress) => {
     setSelectedAddress(address);
-    // Update billing details with selected address - ensure all fields are populated
+    // Update billing details with selected address - preserve ALL current form values
+    // Only update address-specific fields (streetAddress, townCity)
     setBillingDetails((prev) => ({
       ...prev,
+      // Preserve all existing form values, only update address fields
+      streetAddress: address.streetAddress || prev.streetAddress || "",
+      townCity: address.city || prev.townCity || "",
+      // Ensure other fields are populated if empty, but preserve existing values first
       firstName: prev.firstName || user?.firstName || profile?.firstName || "",
       lastName: prev.lastName || user?.lastName || profile?.lastName || "",
       emailAddress: prev.emailAddress || user?.email || profile?.email || "",
       phoneNumber: prev.phoneNumber || user?.phone || profile?.phone || "",
-      streetAddress: address.streetAddress || "",
-      townCity: address.city || "",
       apartment: prev.apartment || "",
       companyName: prev.companyName || "",
     }));
@@ -196,7 +220,6 @@ const CheckoutPage: React.FC = () => {
   };
 
   const handleAddNewAddress = () => {
-    setIsAddingNewAddress(true);
     setShowAddressSelector(false);
     setShowAddressForm(true);
     setAddressSavedSuccess(false);
@@ -225,17 +248,20 @@ const CheckoutPage: React.FC = () => {
 
       await addAddress(newAddress);
       
-      // Show success message and keep form open
+      // Set flag to prevent useEffect from resetting form
+      justSavedAddressRef.current = true;
+      
+      // Show success message and keep form open with current values
       setAddressSavedSuccess(true);
       setShowAddressForm(true); // Explicitly keep form open
       setShowAddressSelector(false); // Don't show address selector
-      // Keep isAddingNewAddress true to show buttons
       
-      // Refresh addresses
+      // Refresh addresses (this might trigger profile update, but we've set the flag)
       getAddresses();
     } catch (error) {
       console.error("Failed to save address:", error);
       setAddressSavedSuccess(false);
+      justSavedAddressRef.current = false;
     }
   };
 
@@ -389,6 +415,8 @@ const CheckoutPage: React.FC = () => {
             response.paymentData.authorizationUrl
           );
 
+          // Set redirect flag to prevent empty cart page from showing
+          setIsRedirectingToPayment(true);
           await clearAllItems();
           window.location.href = response.paymentData.authorizationUrl;
           return;
@@ -398,6 +426,8 @@ const CheckoutPage: React.FC = () => {
         if (response.redirectUrl) {
           console.log("Redirecting:", response.redirectUrl);
 
+          // Set redirect flag to prevent empty cart page from showing
+          setIsRedirectingToPayment(true);
           await clearAllItems();
           window.location.href = response.redirectUrl;
           return;
@@ -451,8 +481,8 @@ const CheckoutPage: React.FC = () => {
     { label: "CheckOut", isCurrentPage: true },
   ];
 
-  // Show loading state while cart is being fetched
-  if (isLoading) {
+  // Show loading state while cart is being fetched or redirecting to payment
+  if (isLoading || isRedirectingToPayment) {
     return (
       <div className="min-h-screen bg-gray-50 py-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -461,7 +491,11 @@ const CheckoutPage: React.FC = () => {
           <div className="text-center py-16">
             <div className="flex flex-col items-center justify-center">
               <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-4"></div>
-              <p className="text-gray-600">Loading your cart...</p>
+              <p className="text-gray-600">
+                {isRedirectingToPayment 
+                  ? "Redirecting to payment..." 
+                  : "Loading your cart..."}
+              </p>
             </div>
           </div>
         </div>
@@ -470,7 +504,8 @@ const CheckoutPage: React.FC = () => {
   }
 
   // Only show empty cart message after loading is complete
-  if (!isLoading && items.length === 0) {
+  // Don't show empty cart page if we're redirecting to payment (prevents flash before Paystack redirect)
+  if (!isLoading && items.length === 0 && !isRedirectingToPayment) {
     return (
       <div className="min-h-screen bg-gray-50 py-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -823,8 +858,7 @@ const CheckoutPage: React.FC = () => {
                     </div>
 
                     {/* Save address options */}
-                    {isAuthenticated &&
-                      (showAddressForm || isAddingNewAddress) && (
+                    {isAuthenticated && showAddressForm && (
                         <div className="pt-4">
                           {addressSavedSuccess && (
                             <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
@@ -834,29 +868,25 @@ const CheckoutPage: React.FC = () => {
                             </div>
                           )}
                           <div className="flex items-center justify-between">
-                            {isAddingNewAddress && (
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                onClick={handleSaveNewAddress}
-                                className="flex items-center gap-1"
-                              >
-                                <Plus className="w-3 h-3" />
-                                Save Address
-                              </Button>
-                            )}
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={handleSaveNewAddress}
+                              className="flex items-center gap-1"
+                            >
+                              <Plus className="w-3 h-3" />
+                              Save Address
+                            </Button>
 
-                            {isAddingNewAddress && (
-                              <Button
-                                type="button"
-                                size="sm"
-                                onClick={handleChangeAddress}
-                                className="flex items-center gap-1 bg-green-600 hover:bg-green-700 text-white"
-                              >
-                                Choose existing Address
-                              </Button>
-                            )}
+                            <Button
+                              type="button"
+                              size="sm"
+                              onClick={handleChangeAddress}
+                              className="flex items-center gap-1 bg-green-600 hover:bg-green-700 text-white"
+                            >
+                              Choose existing Address
+                            </Button>
                           </div>
                         </div>
                       )}
@@ -901,39 +931,6 @@ const CheckoutPage: React.FC = () => {
                   </div>
                 )}
 
-                {/* Address summary for non-form view */}
-                {isAuthenticated &&
-                  selectedAddress &&
-                  !showAddressForm &&
-                  !showAddressSelector && (
-                    <div className="pt-4">
-                      <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <p className="text-sm font-medium text-green-900 mb-1">
-                              ✓ Using saved address for billing information
-                            </p>
-                            <p className="text-xs text-green-700">
-                              {selectedAddress.streetAddress}, {selectedAddress.city}
-                            </p>
-                            <p className="text-xs text-green-600 mt-1">
-                              {billingDetails.emailAddress && `Email: ${billingDetails.emailAddress}`}
-                              {billingDetails.phoneNumber && ` • Phone: ${billingDetails.phoneNumber}`}
-                            </p>
-                          </div>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={handleEditAddress}
-                            className="ml-4 text-green-700 border-green-300 hover:bg-green-100"
-                          >
-                            Edit
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  )}
               </CardContent>
             </Card>
           </div>

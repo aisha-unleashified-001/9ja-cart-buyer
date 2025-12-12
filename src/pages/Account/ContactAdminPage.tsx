@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle, Button, Input, Alert } from '../../components/UI';
 import { useAuthStore } from '../../store/useAuthStore';
 import { MessageSquare, Send } from 'lucide-react';
+import { ticketApi } from '../../api/ticket';
+import { ApiError } from '../../api/client';
 
 const ContactAdminPage: React.FC = () => {
   const { user } = useAuthStore();
@@ -60,9 +62,11 @@ const ContactAdminPage: React.FC = () => {
     }
 
     try {
-      // TODO: Implement API call to send contact message to admin
-      // For now, simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      // Call the contact admin API endpoint
+      await ticketApi.contactAdmin({
+        subject: formData.subject.trim(),
+        message: formData.message.trim(),
+      });
 
       setSuccessMessage('Your message has been sent successfully! We will get back to you soon.');
       setFormData((prev) => ({
@@ -71,7 +75,13 @@ const ContactAdminPage: React.FC = () => {
         message: '',
       }));
     } catch (error) {
-      setErrorMessage('Failed to send message. Please try again later.');
+      // Handle API errors
+      if (error instanceof ApiError) {
+        const errorMessage = error.message || 'Failed to send message. Please try again later.';
+        setErrorMessage(errorMessage);
+      } else {
+        setErrorMessage('Failed to send message. Please try again later.');
+      }
     } finally {
       setIsSubmitting(false);
     }

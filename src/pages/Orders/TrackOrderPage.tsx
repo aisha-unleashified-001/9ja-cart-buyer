@@ -19,7 +19,7 @@ import {
   Alert,
   Image,
 } from "../../components/UI";
-import { mockApi } from "../../data/mockData";
+import { orderApi, type OrderDetailResponse } from "../../api/order";
 import { cn } from "../../lib/utils";
 
 type OrderStatus =
@@ -43,6 +43,7 @@ interface OrderDetails {
   orderDate: string;
   estimatedDelivery: string;
   status: OrderStatus;
+  apiStatus?: string; // Store original API status for special handling
   trackingNumber?: string;
   items: Array<{
     id: string;
@@ -80,105 +81,93 @@ const TrackOrderPage: React.FC = () => {
 
   useEffect(() => {
     const loadOrderDetails = async () => {
-      if (!id) return;
-
-      // Mock order data based on the design
-      const mockOrderDetails: OrderDetails = {
-        id: id || "3354654654526",
-        orderDate: "Feb 16, 2022",
-        estimatedDelivery: "May 16, 2022",
-        status: "awaiting-pickup",
-        trackingNumber: "TRK123456789",
-        items: [
-          {
-            id: "1",
-            name: 'MacBook Pro 14"',
-            image:
-              "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=300&h=300&fit=crop",
-            price: 2599.0,
-            quantity: 1,
-            color: "Space Gray",
-            size: "32GB 1TB",
-          },
-        ],
-        payment: {
-          method: "Visa",
-          last4: "4758",
-        },
-        delivery: {
-          address: "No2 Kobape Road Apt. along Lagos,",
-          city: "Abeokuta",
-          postalCode: "234810565869",
-        },
-        summary: {
-          subtotal: 5554,
-          discount: 1109.4,
-          discountPercentage: 20,
-          delivery: 0.0,
-          tax: 221.88,
-          total: 0.0,
-        },
-      };
+      if (!id) {
+        setError("Order ID is required");
+        setLoading(false);
+        return;
+      }
 
       try {
         setLoading(true);
-        // Try to get real order data first
-        try {
-          const order = await mockApi.getOrder(id);
-          // Convert Order to OrderDetails format
-          const convertedOrder: OrderDetails = {
-            id: order.id,
-            orderDate: new Date(order.createdAt).toLocaleDateString("en-US", {
+        setError(null);
+        
+        // Get real order data from API
+        const order: OrderDetailResponse = await orderApi.getOrderDetail(id);
+        
+        // Get order ID
+        const orderId = order.orderId || order.orderNumber || order.orderNo || id;
+        
+        // Format dates
+        const orderDate = new Date(order.createdAt).toLocaleDateString("en-US", {
+          year: "numeric",
+          month: "short",
+          day: "numeric",
+        });
+        
+        const estimatedDelivery = order.estimatedDelivery
+          ? new Date(order.estimatedDelivery).toLocaleDateString("en-US", {
               year: "numeric",
               month: "short",
               day: "numeric",
-            }),
-            estimatedDelivery: "May 16, 2022", // Could be calculated based on order date
-            status:
-              order.status === "delivered"
-                ? "order-delivered"
-                : order.status === "shipped"
-                ? "awaiting-pickup"
-                : "order-confirmed",
-            trackingNumber: `TRK${order.id.slice(-9)}`,
-            items: order.items.map((item) => ({
-              id: item.id,
-              name: item.product.name,
-              image: item.product.images.main,
-              price:
-                typeof item.product.price === "number"
-                  ? item.product.price
-                  : item.product.price.current,
-              quantity: item.quantity,
-              color: "Space Gray", // Could come from variant selection
-              size: "32GB 1TB", // Could come from variant selection
-            })),
-            payment: {
-              method: "Visa",
-              last4: "4758",
-            },
-            delivery: {
-              address: order.shippingAddress.street,
-              city: order.shippingAddress.city,
-              postalCode: order.shippingAddress.zipCode,
-            },
-            summary: {
-              subtotal: order.total,
-              discount: order.total * 0.2, // 20% discount
-              discountPercentage: 20,
-              delivery: 0.0,
-              tax: order.total * 0.08, // 8% tax
-              total: order.total,
-            },
-          };
-          setOrderDetails(convertedOrder);
-        } catch {
-          // Fallback to mock data if order not found
-          setOrderDetails(mockOrderDetails);
-        }
-      } catch (err) {
+            })
+          : "TBD";
+        
+        // Map order status to tracking status
+        const statusMap: Record<string, OrderStatus> = {
+          completed: "order-delivered", // Will be handled specially in getTrackingSteps
+          delivered: "order-delivered",
+          shipped: "awaiting-pickup",
+          processing: "order-confirmed",
+          confirmed: "in-transit", // Will be handled specially in getTrackingSteps
+          pending: "order-confirmed", // Default: first 2 stages active
+        };
+        
+        const apiStatus = order.status.toUpperCase();
+        const trackingStatus = statusMap[order.status.toLowerCase()] || "order-confirmed";
+        
+        // Convert OrderDetailResponse to OrderDetails format
+        const convertedOrder: OrderDetails = {
+          id: orderId,
+          orderDate: orderDate,
+          estimatedDelivery: estimatedDelivery,
+          status: trackingStatus,
+          apiStatus: apiStatus, // Store original API status
+          trackingNumber: `TRK${orderId.slice(-9)}`,
+          items: (order.items || []).map((item) => ({
+            id: item.id || item.productId,
+            name: item.productName || "Product",
+            image: item.productImage || "",
+            // Coerce safely for cases where backend sends numeric strings (while keeping current behavior for numbers)
+            price: Number((item as any).price ?? 0),
+            quantity: Math.max(1, Number.parseInt(String((item as any).quantity ?? 1), 10) || 1),
+            // Remove hardcoded color and size - these can be added later if available in the API
+          })),
+          payment: {
+            method: order.paymentMethod || "N/A",
+            last4: undefined, // Can be extracted from payment info if available
+          },
+          delivery: {
+            address: order.shippingAddress?.streetAddress || order.shippingAddress?.street || "",
+            city: order.shippingAddress?.city || "",
+            postalCode: order.shippingAddress?.zipCode || "",
+          },
+          summary: {
+            subtotal: order.subtotal ?? (order.items || []).reduce((sum, item) => sum + (item.subtotal || (item.price || 0) * (item.quantity || 0)), 0),
+            discount: order.discount || 0,
+            discountPercentage: order.discount && order.subtotal ? Math.round((order.discount / order.subtotal) * 100) : undefined,
+            delivery: order.shipping || 0,
+            tax: order.tax || 0,
+            total: order.total || 0,
+          },
+        };
+        
+        setOrderDetails(convertedOrder);
+      } catch (err: any) {
+        console.error("Failed to load order details:", err);
         setError(
-          err instanceof Error ? err.message : "Failed to load order details"
+          err?.message || err?.status === 401
+            ? "Please log in to view order details"
+            : "Failed to load order details. Please try again later."
         );
       } finally {
         setLoading(false);
@@ -188,7 +177,7 @@ const TrackOrderPage: React.FC = () => {
     loadOrderDetails();
   }, [id]);
 
-  const getTrackingSteps = (status: OrderStatus): TrackingStep[] => {
+  const getTrackingSteps = (status: OrderStatus, apiStatus?: string): TrackingStep[] => {
     const orderedStatuses: OrderStatus[] = [
       "order-placed",
       "order-confirmed",
@@ -214,9 +203,39 @@ const TrackOrderPage: React.FC = () => {
       "order-delivered": "Package delivered to customer",
     };
 
+    // Handle special status cases
+    if (apiStatus === "COMPLETED") {
+      // All stages completed
+      return orderedStatuses.map((step) => ({
+        id: step,
+        title: labels[step],
+        description: descriptions[step],
+        date: descriptions[step],
+        completed: true,
+        current: false,
+      }));
+    }
+
+    if (apiStatus === "CONFIRMED") {
+      // Order Placed and Order Confirmed completed
+      // Awaiting Pickup and In Transit completed (current at in-transit)
+      return orderedStatuses.map((step, index) => {
+        const inTransitIndex = orderedStatuses.indexOf("in-transit");
+        return {
+          id: step,
+          title: labels[step],
+          description: descriptions[step],
+          date: descriptions[step],
+          completed: index <= inTransitIndex,
+          current: index === inTransitIndex,
+        };
+      });
+    }
+
+    // Default: Order Placed and Order Confirmed active (current at order-confirmed)
     const currentIndex = Math.max(
       orderedStatuses.indexOf(status),
-      0
+      orderedStatuses.indexOf("order-confirmed") // Default to order-confirmed if status not found
     );
 
     return orderedStatuses.map((step, index) => ({
@@ -266,7 +285,7 @@ const TrackOrderPage: React.FC = () => {
     { label: `ID ${orderDetails.id}`, isCurrentPage: true },
   ];
 
-  const trackingSteps = getTrackingSteps(orderDetails.status);
+  const trackingSteps = getTrackingSteps(orderDetails.status, orderDetails.apiStatus);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -398,10 +417,12 @@ const TrackOrderPage: React.FC = () => {
                       <h3 className="font-semibold text-gray-900 text-lg">
                         {item.name}
                       </h3>
-                      <div className="flex items-center gap-4 mt-1 text-sm text-gray-600">
-                        <span>{item.color}</span>
-                        <span>{item.size}</span>
-                      </div>
+                      {(item.color || item.size) && (
+                        <div className="flex items-center gap-4 mt-1 text-sm text-gray-600">
+                          {item.color && <span>{item.color}</span>}
+                          {item.size && <span>{item.size}</span>}
+                        </div>
+                      )}
                       <div className="mt-2">
                         <span className="text-2xl font-bold text-gray-900">
                           {formatPrice(item.price)}
@@ -427,10 +448,14 @@ const TrackOrderPage: React.FC = () => {
                   </h3>
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-6 bg-blue-600 rounded flex items-center justify-center">
-                      <span className="text-white text-xs font-bold">VISA</span>
+                      <span className="text-white text-xs font-bold">
+                        {orderDetails.payment.method?.substring(0, 4).toUpperCase() || "CARD"}
+                      </span>
                     </div>
                     <span className="text-gray-600">
-                      **** **** **** {orderDetails.payment.last4}
+                      {orderDetails.payment.last4
+                        ? `**** **** **** ${orderDetails.payment.last4}`
+                        : orderDetails.payment.method || "N/A"}
                     </span>
                   </div>
                 </CardContent>
@@ -521,7 +546,23 @@ const TrackOrderPage: React.FC = () => {
                       variant="secondary"
                       className="bg-green-100 text-green-800"
                     >
-                      15/02/25
+                      {orderDetails.estimatedDelivery !== "TBD"
+                        ? (() => {
+                            try {
+                              const date = new Date(orderDetails.estimatedDelivery);
+                              if (!isNaN(date.getTime())) {
+                                return date.toLocaleDateString("en-GB", {
+                                  day: "2-digit",
+                                  month: "2-digit",
+                                  year: "2-digit",
+                                });
+                              }
+                            } catch {
+                              // If parsing fails, show the formatted string as-is
+                            }
+                            return orderDetails.estimatedDelivery;
+                          })()
+                        : "TBD"}
                     </Badge>
                   </div>
                   <div className="flex items-center justify-between">
@@ -590,19 +631,23 @@ const TrackOrderPage: React.FC = () => {
                 </h3>
                 <div className="space-y-3">
                   <div className="flex justify-between">
-                    <span className="text-gray-600">Discount</span>
+                    <span className="text-gray-600">Subtotal</span>
                     <span className="font-medium">
                       {formatPrice(orderDetails.summary.subtotal)}
                     </span>
                   </div>
 
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Discount</span>
-                    <span className="font-medium">
-                      ({orderDetails.summary.discountPercentage}%) -{" "}
-                      {formatPrice(orderDetails.summary.discount)}
-                    </span>
-                  </div>
+                  {orderDetails.summary.discount > 0 && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Discount</span>
+                      <span className="font-medium text-green-600">
+                        {orderDetails.summary.discountPercentage
+                          ? `(${orderDetails.summary.discountPercentage}%) - `
+                          : ""}
+                        {formatPrice(orderDetails.summary.discount)}
+                      </span>
+                    </div>
+                  )}
 
                   <div className="flex justify-between">
                     <span className="text-gray-600">Delivery</span>

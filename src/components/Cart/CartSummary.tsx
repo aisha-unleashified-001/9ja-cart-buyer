@@ -14,11 +14,11 @@ const CartSummary: React.FC<CartSummaryProps> = ({ className }) => {
     totalItems,
     subtotal,
     shipping,
-    tax,
     commission,
     showCommission,
     finalTotal,
-    isAuthenticated
+    isAuthenticated,
+    availableItems
   } = useCart();
 
   const [promoCode, setPromoCode] = useState('');
@@ -87,11 +87,6 @@ const CartSummary: React.FC<CartSummaryProps> = ({ className }) => {
               </span>
             </div>
             
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-600">Tax</span>
-              <span className="font-medium">{formatPrice(tax)}</span>
-            </div>
-            
             {showCommission && (
               <div className="flex justify-between text-sm">
                 <span className="text-gray-600">Commission</span>
@@ -133,6 +128,7 @@ const CartSummary: React.FC<CartSummaryProps> = ({ className }) => {
             onClick={handleCheckout}
             className="w-full mt-6"
             size="lg"
+            disabled={availableItems.length === 0}
           >
             {isAuthenticated ? 'Proceed to Checkout' : 'Sign In to Checkout'}
           </Button>

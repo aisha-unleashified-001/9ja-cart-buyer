@@ -730,9 +730,8 @@ export const useCartStore = create<CartStore>()(
   getFinalTotal: (isAuthenticated: boolean) => {
     const subtotal = get().getSubtotal(isAuthenticated);
     const shipping = get().getShipping(isAuthenticated);
-    const tax = get().getTax(isAuthenticated);
     const commission = get().getCommission(isAuthenticated);
-    return subtotal + shipping + tax + commission;
+    return subtotal + shipping + commission;
   },
 
   isItemInCart: (productId: string, isAuthenticated: boolean) => {

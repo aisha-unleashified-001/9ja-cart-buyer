@@ -1,12 +1,11 @@
 import React from "react";
-import { Link, Outlet, useLocation } from "react-router-dom";
+import { Link, Outlet } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { Image } from "../UI/Image";
-import { registerImg, loginImg } from "../../assets/auth";
+import { registerImg } from "../../assets/auth";
 
 const AuthLayout: React.FC = () => {
-  const { pathname } = useLocation();
-  const authImage = pathname.includes("register") ? registerImg : loginImg;
+  const authImage = registerImg;
   return (
     <div className="min-h-screen flex">
       {/* Left side - Image/Branding */}

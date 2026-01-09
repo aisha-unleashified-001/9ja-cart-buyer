@@ -56,7 +56,7 @@ const ProductsPage: React.FC = () => {
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">All Products</h1>
             <p className="text-gray-600 mt-1 sm:mt-2">
-              Showing {products.length} of {pagination.totalItems} product{pagination.totalItems !== 1 ? 's' : ''}
+              Showing {products.length} product{products.length !== 1 ? 's' : ''}
             </p>
           </div>
           
@@ -142,7 +142,7 @@ const ProductsPage: React.FC = () => {
         <div className="flex justify-center mt-8">
           <div className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-200">
             <div className="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></div>
-            Live API Data • {products.length} of {pagination.totalItems} products
+            Live API Data • {products.length} product{products.length !== 1 ? 's' : ''}
           </div>
         </div>
       </div>

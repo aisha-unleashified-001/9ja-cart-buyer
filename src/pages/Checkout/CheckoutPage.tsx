@@ -52,7 +52,7 @@ interface PaymentMethod {
 const CheckoutPage: React.FC = () => {
   const navigate = useNavigate();
 
-  const { items, availableItems, subtotal, shipping: cartShipping, tax: cartTax, finalTotal, clearAllItems, isLoading } = useCart();
+  const { items, availableItems, subtotal, shipping: cartShipping, finalTotal, clearAllItems, isLoading } = useCart();
   const { isAuthenticated, user } = useAuthStore();
   const { profile, fetchProfile, getDefaultAddress, getAddresses, addAddress } =
     useProfile();
@@ -177,9 +177,8 @@ const CheckoutPage: React.FC = () => {
   // Use filtered values from cart (already exclude unavailable products)
   const cartSubtotal = subtotal; // Use filtered subtotal from cart
   const shipping = cartShipping; // Use shipping from cart (already calculated based on filtered items)
-  const tax = cartTax; // Use tax from cart (already calculated based on filtered items)
   const discount = couponDiscount;
-  const total = finalTotal - discount; // Use finalTotal from cart (already includes subtotal + shipping + tax)
+  const total = finalTotal - discount; // Use finalTotal from cart (already includes subtotal + shipping + commission)
 
   // Address management functions
   const handleEditAddress = () => {
@@ -889,14 +888,16 @@ const CheckoutPage: React.FC = () => {
                               Save Address
                             </Button>
 
-                            <Button
-                              type="button"
-                              size="sm"
-                              onClick={handleChangeAddress}
-                              className="flex items-center gap-1 bg-[#8DEB6E] hover:bg-[#8DEB6E]/90 text-primary"
-                            >
-                              Choose existing Address
-                            </Button>
+                            {getAddresses().length > 0 && (
+                              <Button
+                                type="button"
+                                size="sm"
+                                onClick={handleChangeAddress}
+                                className="flex items-center gap-1 bg-[#8DEB6E] hover:bg-[#8DEB6E]/90 text-primary"
+                              >
+                                Choose existing Address
+                              </Button>
+                            )}
                           </div>
                         </div>
                       )}
@@ -951,7 +952,7 @@ const CheckoutPage: React.FC = () => {
               items={availableItems}
               subtotal={cartSubtotal}
               shipping={shipping}
-              tax={tax}
+              tax={0}
               discount={discount}
               total={total}
               appliedCoupon={appliedCoupon}

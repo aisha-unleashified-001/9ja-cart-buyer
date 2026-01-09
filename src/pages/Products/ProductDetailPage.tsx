@@ -422,10 +422,11 @@ const ProductDetailPage: React.FC = () => {
             )}
 
             {/* Quantity and Actions */}
-            <div className="space-y-3">
-              {/* Top Row: Quantity + Add to Cart */}
-              <div className="flex items-center gap-3">
-                <div className="flex items-center border rounded-md">
+            <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3">
+              {/* Row 1 (Mobile): Quantity + Add to Cart */}
+              <div className="flex items-center gap-3 md:contents">
+                {/* Quantity Selector */}
+                <div className="flex items-center border rounded-md md:order-1">
                   <button
                     onClick={() => handleQuantityChange(-1)}
                     className="p-2 hover:bg-gray-100 transition-colors"
@@ -442,9 +443,10 @@ const ProductDetailPage: React.FC = () => {
                   </button>
                 </div>
 
+                {/* Add to Cart Button */}
                 <Button
                   onClick={handleAddToCart}
-                  className="flex-1 bg-[#8DEB6E] hover:bg-[#8DEB6E]/90 text-primary"
+                  className="flex-1 bg-[#8DEB6E] hover:bg-[#8DEB6E]/90 text-primary md:order-2 md:flex-1"
                   size="lg"
                 >
                   <ShoppingCart className="w-5 h-5 mr-2" />
@@ -452,16 +454,9 @@ const ProductDetailPage: React.FC = () => {
                 </Button>
               </div>
 
-              {/* Bottom Row: Checkout + Like */}
-              <div className="flex items-center gap-3">
-                <Button
-                  onClick={handleCheckout}
-                  className="flex-1 bg-[#8DEB6E] hover:bg-[#8DEB6E]/90 text-primary"
-                  size="lg"
-                >
-                  Checkout
-                </Button>
-
+              {/* Row 2 (Mobile): Like + Checkout */}
+              <div className="flex items-center gap-3 md:contents">
+                {/* Like Icon */}
                 <Button
                   variant="outline"
                   size="lg"
@@ -475,13 +470,22 @@ const ProductDetailPage: React.FC = () => {
                     }
                   }}
                   className={cn(
-                    "px-4",
+                    "px-4 md:order-4",
                     isWishlisted && "text-red-500 border-red-500"
                   )}
                 >
                   <Heart
                     className={cn("w-5 h-5", isWishlisted && "fill-current")}
                   />
+                </Button>
+
+                {/* Checkout Button */}
+                <Button
+                  onClick={handleCheckout}
+                  className="flex-1 bg-[#8DEB6E] hover:bg-[#8DEB6E]/90 text-primary md:order-3 md:flex-1"
+                  size="lg"
+                >
+                  Buy Now
                 </Button>
               </div>
             </div>

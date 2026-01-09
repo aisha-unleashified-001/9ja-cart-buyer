@@ -11,6 +11,12 @@ export const apiErrorUtils = {
         
         // Check for direct message field in error data
         if (data.message && typeof data.message === 'string') {
+          const message = data.message.toLowerCase();
+          // Check if it's a streetAddress unique constraint error
+          if ((message.includes('streetaddress') || message.includes('street address')) && 
+              (message.includes('unique') || message.includes('must contain a unique value'))) {
+            return 'This Street Address already exists.';
+          }
           return data.message;
         }
         
@@ -32,6 +38,11 @@ export const apiErrorUtils = {
             return messages.currentPassword;
           }
           if (messages.streetAddress) {
+            // Check if it's a unique constraint error
+            const streetAddressMessage = messages.streetAddress.toLowerCase();
+            if (streetAddressMessage.includes('unique') || streetAddressMessage.includes('must contain a unique value')) {
+              return 'This Street Address already exists.';
+            }
             return messages.streetAddress;
           }
           if (messages.error) {
@@ -48,6 +59,12 @@ export const apiErrorUtils = {
       
       // Handle general API errors (from ApiError.message)
       if (error.message) {
+        const message = error.message.toLowerCase();
+        // Check if it's a streetAddress unique constraint error
+        if ((message.includes('streetaddress') || message.includes('street address')) && 
+            (message.includes('unique') || message.includes('must contain a unique value'))) {
+          return 'This Street Address already exists.';
+        }
         return error.message;
       }
       

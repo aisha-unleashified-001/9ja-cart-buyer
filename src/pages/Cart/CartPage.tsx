@@ -91,8 +91,8 @@ const CartPage: React.FC = () => {
   // Only show empty cart message after initial loading is complete
   if (!isInitialLoading && items.length === 0) {
     return (
-      <div className="min-h-screen bg-gray-50">
-        <div className="max-w-7xl mx-auto px-4 py-8">
+      <div className="min-h-screen bg-gray-50 flex flex-col">
+        <div className="max-w-7xl mx-auto px-4 py-8 w-full">
           {/* Header */}
           <div className="flex items-center gap-4 mb-8">
             <Button
@@ -105,24 +105,28 @@ const CartPage: React.FC = () => {
             </Button>
             <h1 className="text-3xl font-bold text-gray-900">Shopping Cart</h1>
           </div>
+        </div>
 
-          {/* Empty Cart */}
-          <Card className="max-w-md mx-auto text-center">
-            <CardContent className="p-12">
-              <ShoppingBag className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-              <h2 className="text-xl font-semibold text-gray-900 mb-2">
-                Your cart is empty
-              </h2>
-              <p className="text-gray-600 mb-6">
-                Looks like you haven't added any items to your cart yet.
-              </p>
-              <Button asChild className="w-full">
-                <Link to="/products">
-                  Continue Shopping
-                </Link>
-              </Button>
-            </CardContent>
-          </Card>
+        {/* Empty Cart - Centered */}
+        <div className="flex-1 flex items-center justify-center pb-8">
+          <div className="max-w-7xl mx-auto px-4 w-full">
+            <Card className="max-w-md mx-auto text-center">
+              <CardContent className="p-12">
+                <ShoppingBag className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                <h2 className="text-xl font-semibold text-gray-900 mb-2">
+                  Your cart is empty
+                </h2>
+                <p className="text-gray-600 mb-6">
+                  Looks like you haven't added any items to your cart yet.
+                </p>
+                <Button asChild className="w-full">
+                  <Link to="/products">
+                    Continue Shopping
+                  </Link>
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </div>
     );
@@ -167,7 +171,7 @@ const CartPage: React.FC = () => {
               <Button
                 variant="outline"
                 onClick={() => setShowClearModal(true)}
-                className="text-red-600 border-red-200 hover:bg-red-50 touch-target"
+                className="text-red-600 border-red-200 hover:bg-red-50 hover:text-red-600 touch-target"
                 disabled={isLoading}
               >
                 <Trash2 className="w-4 h-4 mr-2" />
@@ -226,7 +230,7 @@ const CartPage: React.FC = () => {
                       Discover more products you might like
                     </p>
                   </div>
-                  <Button variant="outline" asChild>
+                  <Button variant="outline" asChild className="border-[#2ac12a]">
                     <Link to="/products">
                       Browse Products
                     </Link>

@@ -45,7 +45,7 @@ const PromoBanner = () => {
           ))}
         </div>
 
-        <button className="bg-[#8DEB6E] text-primary px-8 py-3 rounded-sm font-medium hover:bg-[#8DEB6E]/90 transition-colors">
+        <button className="bg-[#8DEB6E] text-primary px-8 py-3 rounded-sm font-medium hover:bg-[#8DEB6E]/90 transition-colors border border-[#2ac12a]">
           Buy Now!
         </button>
       </div>
@@ -287,7 +287,7 @@ const VendorStorefrontPage: React.FC = () => {
 
           <button
             onClick={handleCopyLink}
-            className="bg-[#8DEB6E] text-primary px-6 py-2.5 rounded text-sm font-medium hover:bg-[#8DEB6E]/90 transition-colors self-start md:self-center flex items-center gap-2"
+            className="bg-[#8DEB6E] text-primary px-6 py-2.5 rounded text-sm font-medium hover:bg-[#8DEB6E]/90 transition-colors self-start md:self-center flex items-center gap-2 border border-[#2ac12a]"
           >
             <Copy className="w-4 h-4" />
             Copy Store Link

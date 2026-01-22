@@ -1112,7 +1112,7 @@ const CheckoutPage: React.FC = () => {
                 <Button
                   onClick={handlePlaceOrder}
                   disabled={isProcessing}
-                  className="w-full mt-8 bg-[#8DEB6E] hover:bg-[#8DEB6E]/90 text-primary py-3 text-base font-medium"
+                  className="w-full mt-8 bg-[#8DEB6E] hover:bg-[#8DEB6E]/90 text-primary py-3 text-base font-medium border border-[#2ac12a]"
                 >
                   {isProcessing ? (
                     <div className="flex items-center justify-center space-x-2">

@@ -105,12 +105,12 @@ const RegisterPage: React.FC = () => {
   };
 
   return (
-    <div className="border border-gray-300 rounded-lg p-8">
+    <div className="border border-[#C8E6C8] rounded-lg p-8 bg-[#F0FBF0] shadow-sm">
       <div className="text-center mb-8">
         <h1 className="text-2xl font-bold text-gray-900">Create your account</h1>
         <p className="mt-2 text-sm text-gray-600">
           Already have an account?{' '}
-          <Link to="/auth/login" className="font-medium text-blue-600 hover:text-blue-500">
+          <Link to="/auth/login" className="font-medium text-[#1E4700] hover:text-[#1E4700]/80">
             Sign in
           </Link>
         </p>
@@ -245,11 +245,11 @@ const RegisterPage: React.FC = () => {
           />
           <label htmlFor="agree-terms" className="ml-2 block text-sm text-gray-900">
             I agree to the{' '}
-            <a href="#" className="text-blue-600 hover:text-blue-500">
+            <a href="#" className="text-[#1E4700] hover:text-[#1E4700]/80">
               Terms of Service
             </a>{' '}
             and{' '}
-            <a href="#" className="text-blue-600 hover:text-blue-500">
+            <a href="#" className="text-[#1E4700] hover:text-[#1E4700]/80">
               Privacy Policy
             </a>
           </label>
@@ -257,7 +257,7 @@ const RegisterPage: React.FC = () => {
 
         <Button
           type="submit"
-          className="w-full"
+          className="w-full !text-[#1E4700]"
           disabled={isLoading}
         >
           {isLoading ? 'Creating account...' : 'Create account'}
@@ -270,7 +270,7 @@ const RegisterPage: React.FC = () => {
             <div className="w-full border-t border-gray-300"></div>
           </div>
           <div className="relative flex justify-center text-sm">
-            <span className="px-2 bg-white text-gray-500">Or continue with</span>
+            <span className="px-2 bg-[#F0FBF0] text-gray-500">Or continue with</span>
           </div>
         </div>
 

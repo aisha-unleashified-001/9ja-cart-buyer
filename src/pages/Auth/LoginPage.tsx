@@ -62,12 +62,12 @@ const LoginPage: React.FC = () => {
   };
 
   return (
-    <div className="border border-gray-300 rounded-lg p-8">
+    <div className="border border-[#C8E6C8] rounded-lg p-8 bg-[#F0FBF0] shadow-sm">
       <div className="text-center mb-8">
         <h1 className="text-2xl font-bold text-gray-900">Sign in to your account</h1>
         <p className="mt-2 text-sm text-gray-600">
           Don't have an account?{' '}
-          <Link to="/auth/register" className="font-medium text-blue-600 hover:text-blue-500">
+          <Link to="/auth/register" className="font-medium text-[#1E4700] hover:text-[#1E4700]/80">
             Sign up
           </Link>
         </p>
@@ -141,7 +141,7 @@ const LoginPage: React.FC = () => {
           </div>
 
           <div className="text-sm">
-            <a href="#" className="font-medium text-blue-600 hover:text-blue-500">
+            <a href="#" className="font-medium text-[#1E4700] hover:text-[#1E4700]/80">
               Forgot your password?
             </a>
           </div>
@@ -149,7 +149,7 @@ const LoginPage: React.FC = () => {
 
         <Button
           type="submit"
-          className="w-full"
+          className="w-full !text-[#1E4700]"
           disabled={isLoading}
         >
           {isLoading ? 'Signing in...' : 'Sign in'}
@@ -162,7 +162,7 @@ const LoginPage: React.FC = () => {
             <div className="w-full border-t border-gray-300"></div>
           </div>
           <div className="relative flex justify-center text-sm">
-            <span className="px-2 bg-white text-gray-500">Or continue with</span>
+            <span className="px-2 bg-[#F0FBF0] text-gray-500">Or continue with</span>
           </div>
         </div>
 

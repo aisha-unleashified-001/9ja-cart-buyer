@@ -102,7 +102,7 @@ const LiveProducts: React.FC = () => {
           </div>
           
           <Link to="/products">
-            <Button variant="outline" className="hidden sm:flex items-center gap-2">
+            <Button variant="outline" className="hidden sm:flex items-center gap-2 hover:border-[#2ac12a]">
               View All Products
               <ChevronRight className="h-4 w-4" />
             </Button>
@@ -124,7 +124,7 @@ const LiveProducts: React.FC = () => {
         {/* Mobile View All Button */}
         <div className="flex justify-center mt-6 sm:hidden">
           <Link to="/products">
-            <Button variant="outline" className="flex items-center gap-2">
+            <Button variant="outline" className="flex items-center gap-2 hover:border-[#2ac12a]">
               View All Products
               <ChevronRight className="h-4 w-4" />
             </Button>

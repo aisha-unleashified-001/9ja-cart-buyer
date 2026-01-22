@@ -274,7 +274,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
                 <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent transform translate-y-0 sm:translate-y-full sm:group-hover:translate-y-0 transition-transform duration-300">
                   <Button
                     variant="ghost"
-                    className="w-full text-white bg-black hover:bg-black hover:text-white backdrop-blur-sm font-medium rounded-none"
+                    className="w-full text-white bg-[#182F38] hover:bg-[#182F38]/90 hover:text-white backdrop-blur-sm font-medium rounded-none"
                     onClick={handleAddToCart}
                     disabled={isOperating || addedToCart}
                   >

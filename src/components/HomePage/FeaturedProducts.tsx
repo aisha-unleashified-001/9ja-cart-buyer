@@ -95,7 +95,7 @@ const FeaturedProducts: React.FC = () => {
           <Link to="/products">
             <Button
               variant="outline"
-              className="hidden sm:flex items-center gap-2"
+              className="hidden sm:flex items-center gap-2 hover:border-[#2ac12a]"
             >
               View All Products
               <ChevronRight className="h-4 w-4" />
@@ -118,7 +118,7 @@ const FeaturedProducts: React.FC = () => {
         {/* Mobile View All Button */}
         <div className="flex justify-center mt-8 sm:hidden">
           <Link to="/products">
-            <Button variant="outline" className="flex items-center gap-2">
+            <Button variant="outline" className="flex items-center gap-2 hover:border-[#2ac12a]">
               View All Products
               <ChevronRight className="h-4 w-4" />
             </Button>

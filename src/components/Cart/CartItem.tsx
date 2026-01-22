@@ -157,7 +157,7 @@ const CartItem: React.FC<CartItemProps> = ({
             variant="ghost"
             size="icon"
             onClick={() => onRemove?.(product.id)}
-            className="text-gray-400 hover:text-red-500 flex-shrink-0"
+            className="text-gray-400 hover:text-red-500 hover:bg-red-50 flex-shrink-0"
           >
             <Trash2 className="w-4 h-4" />
           </Button>

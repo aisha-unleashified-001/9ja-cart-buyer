@@ -1,8 +1,8 @@
 import React from "react";
 import { Link, Outlet } from "react-router-dom";
-import { ArrowLeft } from "lucide-react";
 import { Image } from "../UI/Image";
 import { registerImg } from "../../assets/auth";
+import logoImage from "../../assets/logo.png";
 
 const AuthLayout: React.FC = () => {
   const authImage = registerImg;
@@ -26,14 +26,15 @@ const AuthLayout: React.FC = () => {
       {/* Right side - Auth Form */}
       <div className="flex-1 flex flex-col justify-center px-6 py-12 lg:px-8">
         <div className="sm:mx-auto sm:w-full sm:max-w-lg">
-          {/* Back to home link */}
-          <Link
-            to="/"
-            className="inline-flex items-center text-sm text-gray-600 hover:text-gray-900 mb-8 transition-colors"
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to homepage
-          </Link>
+          {/* Logo - Back to home */}
+          <div className="flex justify-center mb-12">
+            <Link
+              to="/"
+              className="transition-opacity hover:opacity-80"
+            >
+              <img src={logoImage} alt="9ja-cart" className="h-10 w-auto" />
+            </Link>
+          </div>
 
           <Outlet />
         </div>

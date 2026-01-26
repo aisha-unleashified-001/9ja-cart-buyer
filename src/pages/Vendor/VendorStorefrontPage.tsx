@@ -129,6 +129,26 @@ const VendorStorefrontPage: React.FC = () => {
     return { vendorProducts: filtered, vendorInfo, bestSellers };
   }, [vendorId, products]);
 
+  const sortProducts = (items: any[], sort: string) => {
+    const arr = [...items];
+
+    if (sort === "price-low") {
+      arr.sort((a, b) => (a.price?.current || 0) - (b.price?.current || 0));
+    } else if (sort === "price-high") {
+      arr.sort((a, b) => (b.price?.current || 0) - (a.price?.current || 0));
+    } else if (sort === "name") {
+      arr.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+    }
+
+    return arr;
+  };
+
+  // Apply sorting to best sellers grid (above banner) too
+  const sortedBestSellers = useMemo(() => {
+    if (sortBy === "default") return bestSellers;
+    return sortProducts(bestSellers, sortBy);
+  }, [bestSellers, sortBy]);
+
   // Filter and sort products based on search, category, and sort options
   // Show all products that match the filters (including best sellers if they match)
   const filteredProducts = useMemo(() => {
@@ -149,13 +169,7 @@ const VendorStorefrontPage: React.FC = () => {
     }
 
     // Apply sorting
-    if (sortBy === "price-low") {
-      filtered.sort((a, b) => (a.price?.current || 0) - (b.price?.current || 0));
-    } else if (sortBy === "price-high") {
-      filtered.sort((a, b) => (b.price?.current || 0) - (a.price?.current || 0));
-    } else if (sortBy === "name") {
-      filtered.sort((a, b) => a.name.localeCompare(b.name));
-    }
+    filtered = sortProducts(filtered, sortBy);
 
     return filtered;
   }, [vendorProducts, searchQuery, selectedCategory, sortBy]);
@@ -277,7 +291,7 @@ const VendorStorefrontPage: React.FC = () => {
                 <span className="text-gray-400">|</span>
                 <span className="text-gray-600">144 Reviews</span>
                 <span className="text-gray-400">|</span>
-                <div className="flex items-center gap-1 text-[#00FF66]">
+                <div className="flex items-center gap-1 text-[#1E4700]">
                   <CheckCircle className="w-3 h-3" />
                   <span>Verified</span>
                 </div>
@@ -295,7 +309,7 @@ const VendorStorefrontPage: React.FC = () => {
         </header>
 
         {/* 2. Filter Bar */}
-        <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-10">
+        <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-10 relative z-50">
           <div className="flex items-center gap-2">
             <h2 className="text-xl font-medium text-[#182F38]">
               Products{" "}
@@ -329,7 +343,7 @@ const VendorStorefrontPage: React.FC = () => {
               </button>
 
               {isCategoryDropdownOpen && (
-                <div className="absolute top-full left-0 mt-2 w-56 bg-white border border-gray-100 rounded-lg shadow-xl z-20 overflow-hidden max-h-60 overflow-y-auto custom-scrollbar animate-in fade-in zoom-in-95 duration-100">
+                <div className="absolute top-full left-0 mt-2 w-56 bg-white border border-gray-100 rounded-lg shadow-xl z-50 overflow-hidden max-h-48 overflow-y-auto custom-scrollbar animate-in fade-in zoom-in-95 duration-100">
                   <button
                     onClick={() => handleCategorySelect("")}
                     className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 ${
@@ -396,7 +410,7 @@ const VendorStorefrontPage: React.FC = () => {
               Best Sellers
             </h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-10">
-              {bestSellers.slice(0, 4).map((product) => (
+              {sortedBestSellers.slice(0, 4).map((product) => (
                 <ProductCard key={product.id} product={normalizeProductImages(product)} />
               ))}
             </div>

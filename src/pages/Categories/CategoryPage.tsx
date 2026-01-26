@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from "react";
-import { useParams, Navigate } from "react-router-dom";
+import { useLocation, useParams, Navigate } from "react-router-dom";
 import { Breadcrumb, Loading, Alert } from "../../components/UI";
 import ProductCard from "../../components/Product/ProductCard";
 import { useRealProductsByCategory } from "../../hooks/api/useRealProducts";
+import { useAllRealCategories } from "../../hooks/api/useRealCategories";
 import { normalizeProductImages } from "@/lib/utils";
 
 const CategoryPage: React.FC = () => {
   const { categoryId } = useParams<{ categoryId: string }>();
+  const location = useLocation();
   const [currentPage, setCurrentPage] = useState(1);
   const perPage = 12;
 
@@ -14,6 +16,8 @@ const CategoryPage: React.FC = () => {
   if (categoryId === "services") {
     return <Navigate to="/services" replace />;
   }
+
+  const { categories } = useAllRealCategories();
 
   const params = React.useMemo(
     () => ({ page: currentPage, perPage }),
@@ -55,13 +59,26 @@ const CategoryPage: React.FC = () => {
     );
   }
 
-  // Get category name from first product if available
-  // const categoryName = products.length > 0 ? products[0].categoryId : categoryId;
+  const categoryNameFromState =
+    typeof (location.state as any)?.categoryName === "string"
+      ? ((location.state as any).categoryName as string)
+      : undefined;
+
+  const categoryNameFromList =
+    categoryId && categories.length > 0
+      ? categories.find((c) => c.id === categoryId)?.name
+      : undefined;
+
+  const categoryTitle =
+    categoryNameFromState ||
+    categoryNameFromList ||
+    products[0]?.categoryName ||
+    "Category";
 
   const breadcrumbItems = [
     { label: "Home", href: "/" },
     { label: "Products", href: "/products" },
-    { label: `Category`, isCurrentPage: true },
+    { label: categoryTitle, isCurrentPage: true },
   ];
 
   return (
@@ -74,12 +91,10 @@ const CategoryPage: React.FC = () => {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 sm:mb-8">
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
-              {products.length > 0 && products[0].categoryId
-                ? `Category Products`
-                : "Category Products"}
+              {categoryTitle}
             </h1>
             <p className="text-gray-600 mt-1 sm:mt-2">
-              Showing {products.length} of {pagination.totalItems} product
+              Showing {products.length} of {pagination.totalItems} active product
               {pagination.totalItems !== 1 ? "s" : ""}
             </p>
           </div>

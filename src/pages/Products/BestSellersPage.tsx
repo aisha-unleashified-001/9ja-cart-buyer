@@ -56,7 +56,8 @@ const BestSellersPage: React.FC = () => {
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Best Sellers</h1>
             <p className="text-gray-600 mt-1 sm:mt-2">
-              Showing {products.length} of {pagination.totalItems} best selling product{pagination.totalItems !== 1 ? 's' : ''}
+              Showing {products.length} active best selling product
+              {products.length !== 1 ? 's' : ''}
             </p>
           </div>
           

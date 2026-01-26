@@ -78,8 +78,8 @@ const SearchResultsPage: React.FC = () => {
               {query ? (
                 <>
                   Results for "<span className="font-medium">{query}</span>" -{" "}
-                  {products.length} of {pagination.totalItems} product
-                  {pagination.totalItems !== 1 ? "s" : ""}
+                  {products.length} active product
+                  {products.length !== 1 ? "s" : ""}
                 </>
               ) : (
                 "Enter a search term to find products"

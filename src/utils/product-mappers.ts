@@ -275,10 +275,16 @@ export const mapApiProductToProductSummary = (apiProduct: ApiProductData): Produ
 
 // Map array of API products to ProductSummary array
 export const mapApiProductsToProductSummaries = (apiProducts: ApiProductData[]): ProductSummary[] => {
-  return apiProducts.map(mapApiProductToProductSummary);
+  // Buyer-side rule: do not expose inactive products
+  return apiProducts
+    .filter((p) => p.isActive === '1')
+    .map(mapApiProductToProductSummary);
 };
 
 // Map array of API products to Product array
 export const mapApiProductsToProducts = (apiProducts: ApiProductData[]): Product[] => {
-  return apiProducts.map(mapApiProductToProduct);
+  // Buyer-side rule: do not expose inactive products
+  return apiProducts
+    .filter((p) => p.isActive === '1')
+    .map(mapApiProductToProduct);
 };

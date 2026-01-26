@@ -68,7 +68,9 @@ const CategoriesSidebar: React.FC<CategoriesSidebarProps> = ({ categories }) => 
         toggleCategory(category.id);
       } else {
         // No subcategories - navigate directly
-        navigate(`/category/${category.id}`);
+        navigate(`/category/${category.id}`, {
+          state: { categoryName: category.name },
+        });
       }
     } else if (category.level === 2) {
       // Level 2 categories (subcategories) - open modal
@@ -81,7 +83,9 @@ const CategoriesSidebar: React.FC<CategoriesSidebarProps> = ({ categories }) => 
         });
       } else {
         // Fallback to direct navigation if no options defined
-        navigate(`/category/${category.id}`);
+        navigate(`/category/${category.id}`, {
+          state: { categoryName: category.name },
+        });
       }
     }
   };

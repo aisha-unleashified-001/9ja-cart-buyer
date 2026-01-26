@@ -1,42 +1,42 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Search } from 'lucide-react';
 import { Breadcrumb, Loading, Alert } from '../../components/UI';
 import ProductCard from '../../components/Product/ProductCard';
 import CategoriesSidebar from '../../components/HomePage/CategoriesSidebar';
-import { useRealProductsList } from '../../hooks/api/useRealProducts';
+import { useBuyerActiveProductsList } from '../../hooks/api/useRealProducts';
 import { useAllRealCategories } from '../../hooks/api/useRealCategories';
 import { normalizeProductImages } from '@/lib/utils';
 
 const ProductsPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const perPage = 12;
+
+  // Typing search (Storefront-style): apply automatically as user types.
+  // Debounced to avoid firing a request on every keystroke.
+  useEffect(() => {
+    const handle = window.setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery.trim());
+    }, 300);
+
+    return () => window.clearTimeout(handle);
+  }, [searchQuery]);
 
   const { 
     products, 
     loading, 
     error, 
-    pagination,
-    refetch 
-  } = useRealProductsList({ 
+    pagination
+  } = useBuyerActiveProductsList({ 
     page: currentPage, 
     perPage,
-    ...(searchQuery && { search: searchQuery })
+    ...(debouncedSearchQuery && { search: debouncedSearchQuery })
   });
 
   const { categories, loading: categoriesLoading, error: categoriesError } = useAllRealCategories();
 
-  if (loading) {
-    return (
-      <div className="min-h-screen p-6">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex items-center justify-center py-12">
-            <Loading size="lg" />
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const isInitialLoad = loading && products.length === 0;
 
   if (error) {
     return (
@@ -61,7 +61,8 @@ const ProductsPage: React.FC = () => {
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">All Products</h1>
             <p className="text-gray-600 mt-1 sm:mt-2">
-              Showing {products.length} product{products.length !== 1 ? 's' : ''}
+              Showing {products.length} of {pagination.totalItems} active product
+              {pagination.totalItems !== 1 ? 's' : ''}
             </p>
           </div>
           
@@ -74,23 +75,20 @@ const ProductsPage: React.FC = () => {
                 value={searchQuery}
                 onChange={(e) => {
                   setSearchQuery(e.target.value);
-                  setCurrentPage(1); // Reset to first page on search
-                }}
-                onKeyPress={(e) => {
-                  if (e.key === 'Enter') {
-                    refetch({ page: 1, perPage, search: searchQuery });
-                  }
+                  setCurrentPage(1);
                 }}
                 className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2ac12a] focus:border-[#2ac12a]"
               />
               <button
                 onClick={() => {
-                  refetch({ page: 1, perPage, search: searchQuery });
+                  // Optional "instant apply" if user clicks the icon before debounce fires
+                  setDebouncedSearchQuery(searchQuery.trim());
+                  setCurrentPage(1);
                 }}
                 className="bg-[#8DEB6E] hover:bg-[#8DEB6E]/90 text-primary p-2.5 rounded-lg border border-[#2ac12a] transition-colors cursor-pointer flex items-center justify-center"
                 aria-label="Search"
               >
-                <Search className="w-5 h-5" />
+                {loading ? <Loading size="sm" /> : <Search className="w-5 h-5" />}
               </button>
             </div>
           </div>
@@ -117,7 +115,11 @@ const ProductsPage: React.FC = () => {
 
           {/* Products Content */}
           <div className="lg:col-span-3 xl:col-span-4">
-            {products.length > 0 ? (
+            {isInitialLoad ? (
+              <div className="flex items-center justify-center min-h-[400px]">
+                <Loading size="lg" />
+              </div>
+            ) : products.length > 0 ? (
               <>
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
                   {products.map((product) => (
@@ -131,12 +133,13 @@ const ProductsPage: React.FC = () => {
                 </div>
 
                 {/* Pagination */}
-                {products.length > 12 && pagination.totalPages > 1 && (
+                {pagination.totalPages > 1 && (
                   <div className="flex justify-center items-center gap-2 mt-8">
                     <button
                       onClick={() => {
                         if (currentPage > 1) {
-                          setCurrentPage(currentPage - 1);
+                          const nextPage = currentPage - 1;
+                          setCurrentPage(nextPage);
                         }
                       }}
                       disabled={currentPage <= 1}
@@ -152,7 +155,8 @@ const ProductsPage: React.FC = () => {
                     <button
                       onClick={() => {
                         if (currentPage < pagination.totalPages) {
-                          setCurrentPage(currentPage + 1);
+                          const nextPage = currentPage + 1;
+                          setCurrentPage(nextPage);
                         }
                       }}
                       disabled={currentPage >= pagination.totalPages}
@@ -167,7 +171,7 @@ const ProductsPage: React.FC = () => {
               <div className="flex items-center justify-center min-h-[400px]">
                 <div className="text-center">
                   <p className="text-gray-500 text-lg">No products found</p>
-                  {searchQuery && (
+                  {searchQuery.trim() && (
                     <p className="text-gray-400 mt-2">
                       Try adjusting your search terms
                     </p>

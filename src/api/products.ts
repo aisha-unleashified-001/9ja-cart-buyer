@@ -6,6 +6,7 @@ export interface ProductsListParams {
   perPage?: number;
   category?: string;
   search?: string;
+  isActive?: string; // "1" to fetch active products only (buyer side)
 }
 
 // Products API response types (matching the actual API structure)
@@ -65,6 +66,7 @@ export const productsApi = {
       searchParams.append("perPage", params.perPage.toString());
     if (params.category) searchParams.append("category", params.category);
     if (params.search) searchParams.append("search", params.search);
+    if (params.isActive) searchParams.append("isActive", params.isActive);
 
     const queryString = searchParams.toString();
     const endpoint = `/product/items${queryString ? `?${queryString}` : ""}`;
@@ -92,6 +94,7 @@ export const productsApi = {
     if (params.perPage)
       searchParams.append("perPage", params.perPage.toString());
     if (params.search) searchParams.append("search", params.search);
+    if (params.isActive) searchParams.append("isActive", params.isActive);
 
     const queryString = searchParams.toString();
     const endpoint = `/product/category/${categoryId}/items${

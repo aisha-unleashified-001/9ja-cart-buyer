@@ -138,14 +138,21 @@
   label:has(input[type="radio"]) {
     @apply cursor-pointer;
   }
-  /* Disabled buttons should not have pointer cursor */
-  button:disabled,
-  input:disabled {
-    @apply cursor-not-allowed;
-  }
 }
 
 @layer utilities {
+  /* Ensure ALL buttons always use pointer cursor across the app */
+  button,
+  button:disabled,
+  input[type="button"],
+  input[type="submit"],
+  input[type="reset"],
+  input[type="button"]:disabled,
+  input[type="submit"]:disabled,
+  input[type="reset"]:disabled {
+    cursor: pointer !important;
+  }
+
   /* Hide scrollbar for Chrome, Safari and Opera */
   .scrollbar-hide {
     -ms-overflow-style: none;  /* IE and Edge */

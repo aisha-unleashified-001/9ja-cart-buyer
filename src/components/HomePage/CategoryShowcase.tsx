@@ -225,6 +225,7 @@ const CategoryShowcase: React.FC = () => {
                   <Link
                     key={category.id}
                     to={`/category/${category.id}`}
+                    state={{ categoryName: category.name }}
                     className={`flex-shrink-0 w-[calc(100%/6-1rem)] group ${
                       category.featured ? 'order-first' : ''
                     }`}
@@ -268,6 +269,7 @@ const CategoryShowcase: React.FC = () => {
                   <Link
                     key={category.id}
                     to={`/category/${category.id}`}
+                    state={{ categoryName: category.name }}
                     className="flex-shrink-0 group"
                   >
                     <div

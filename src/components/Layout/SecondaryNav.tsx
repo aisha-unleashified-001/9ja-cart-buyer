@@ -71,6 +71,11 @@ const SecondaryNav: React.FC = () => {
                 <React.Fragment key={category.slug}>
                   <Link
                     to={categoryPath}
+                    state={
+                      category.id === "services"
+                        ? undefined
+                        : { categoryName: category.name }
+                    }
                     className={`whitespace-nowrap text-sm hover:text-primary transition-colors py-1 flex-shrink-0 relative ${
                       active ? 'text-primary font-medium' : ''
                     }`}

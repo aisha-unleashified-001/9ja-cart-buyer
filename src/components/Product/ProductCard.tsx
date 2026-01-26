@@ -207,12 +207,12 @@ const ProductCard: React.FC<ProductCardProps> = ({
   return (
     <Card
       className={cn(
-        "group relative bg-white border-none border-0 rounded-none overflow-hidden cursor-pointer w-full",
+        "group relative bg-white border-none border-0 rounded-none overflow-hidden cursor-pointer w-full h-full",
         className
       )}
     >
-      <CardContent className="p-0">
-        <Link to={`/products/${product.id}`} className="block">
+      <CardContent className="p-0 h-full flex flex-col">
+        <Link to={`/products/${product.id}`} className="block h-full flex flex-col">
           <div className="relative">
             {/* Discount Badge */}
             {discount && discount.percentage > 0 && (
@@ -294,7 +294,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
 
           {/* Product Info */}
           <div 
-            className="p-3 sm:p-4 space-y-2 sm:space-y-3"
+            className="p-3 sm:p-4 space-y-2 sm:space-y-3 flex-1"
             style={{
               background: 'linear-gradient(to bottom, rgba(141, 235, 110, 0.08) 0%, rgba(141, 235, 110, 0.1) 100%)'
             }}

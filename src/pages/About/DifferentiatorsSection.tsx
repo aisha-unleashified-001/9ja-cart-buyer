@@ -17,7 +17,7 @@ const DifferentiatorsSection = () => {
           >
             <motion.h2
               variants={fadeInUp}
-              className="text-3xl md:text-4xl font-bold mb-4 text-foreground"
+              className="text-3xl md:text-4xl font-bold mb-4 text-[#182F38]"
             >
               What Sets Us Apart
             </motion.h2>

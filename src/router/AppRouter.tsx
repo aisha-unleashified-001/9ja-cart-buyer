@@ -184,6 +184,7 @@ import { LoginPage, RegisterPage, RegistrationSuccessPage, VerifyEmailPage } fro
 // Support pages
 import ContactPage from "../pages/Support/ContactPage";
 import FAQPage from "../pages/Support/FAQPage";
+import TermsPage from "../pages/Support/TermsPage";
 
 // Additional pages
 import CategoryPage from "../pages/Categories/CategoryPage";
@@ -337,6 +338,10 @@ const router = createBrowserRouter([
       {
         path: "contact",
         element: <ContactPage />,
+      },
+      {
+        path: "terms",
+        element: <TermsPage />,
       },
       {
         path: "about",

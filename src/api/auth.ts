@@ -142,7 +142,7 @@ export const authApi = {
 
   // Reset password (buyer; requires OTP from forgot-password step; no response body on success)
   resetPassword: async (payload: ResetPasswordRequest): Promise<void> => {
-    return apiClient.postWithEmptyResponse('/buyer/reset-password', payload, false);
+    return apiClient.postWithBodyNoResponse('/buyer/reset-password', payload, false);
   },
 
   // Logout (if needed for server-side logout)

@@ -177,6 +177,56 @@ class ApiClient {
   }
 
   /**
+   * POST with JSON body but no response body expected (e.g. forgot-password).
+   * Uses Basic Auth by default. Does not parse response as JSON on success.
+   */
+  async postWithBodyNoResponse(
+    endpoint: string,
+    data: unknown,
+    useBearer: boolean = false
+  ): Promise<void> {
+    const url = `${this.baseURL}${endpoint}`;
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      ...(useBearer
+        ? { Authorization: `Bearer ${this.getAuthToken() ?? ''}` }
+        : { Authorization: this.getBasicAuthHeader() }),
+    };
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(data),
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+      const text = await response.text();
+      if (!response.ok) {
+        let msg = `HTTP error! status: ${response.status}`;
+        try {
+          const parsed = text ? JSON.parse(text) : {};
+          msg =
+            (parsed as { messages?: { error?: string }; message?: string }).messages?.error ??
+            (parsed as { message?: string }).message ??
+            msg;
+        } catch {
+          if (text) msg = text;
+        }
+        throw new ApiError(response.status, msg, text);
+      }
+    } catch (e) {
+      clearTimeout(timeoutId);
+      if (e instanceof ApiError) throw e;
+      if (e instanceof Error && e.name === 'AbortError') {
+        throw new ApiError(408, 'Request timeout - Please try again');
+      }
+      throw e;
+    }
+  }
+
+  /**
    * POST with no response body (e.g. track-view). Uses Bearer auth.
    * Does not parse JSON; avoids errors when API returns empty body.
    */
@@ -205,57 +255,6 @@ class ApiClient {
         try {
           const data = text ? JSON.parse(text) : {};
           msg = (data as any).messages?.error ?? (data as any).message ?? msg;
-        } catch {
-          if (text) msg = text;
-        }
-        throw new ApiError(response.status, msg, text);
-      }
-    } catch (e) {
-      clearTimeout(timeoutId);
-      if (e instanceof ApiError) throw e;
-      if (e instanceof Error && e.name === 'AbortError') {
-        throw new ApiError(408, 'Request timeout - API took too long to respond');
-      }
-      throw e;
-    }
-  }
-
-  /**
-   * POST with request body but no/empty response body (e.g. forgot-password).
-   * Uses Basic Auth by default. Does not parse JSON on success.
-   */
-  async postWithEmptyResponse(
-    endpoint: string,
-    data: unknown,
-    useBearer: boolean = false
-  ): Promise<void> {
-    const url = `${this.baseURL}${endpoint}`;
-    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-    if (useBearer) {
-      const token = this.getAuthToken();
-      if (!token) throw new ApiError(401, 'Authentication token required');
-      headers['Authorization'] = `Bearer ${token}`;
-    } else {
-      headers['Authorization'] = this.getBasicAuthHeader();
-    }
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 30000);
-    try {
-      const response = await fetch(url, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(data),
-        signal: controller.signal,
-      });
-      clearTimeout(timeoutId);
-      const text = await response.text();
-      if (!response.ok) {
-        let msg = `HTTP error! status: ${response.status}`;
-        try {
-          const parsed = text ? JSON.parse(text) : {};
-          msg = (parsed as { messages?: { error?: string }; message?: string }).messages?.error
-            ?? (parsed as { message?: string }).message
-            ?? msg;
         } catch {
           if (text) msg = text;
         }

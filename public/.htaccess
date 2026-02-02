@@ -1,0 +1,29 @@
+# SPA routing for React Router on Apache/cPanel
+# Redirects all requests to index.html so client-side routing works
+# (direct URLs and page refresh will load the app correctly)
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+
+  # Don't rewrite files or directories that exist
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+
+  # Rewrite everything else to index.html for React Router
+  RewriteRule ^ index.html [L]
+</IfModule>
+
+# Security: Prevent directory listing
+Options -Indexes
+
+# Cache static assets for better performance
+<IfModule mod_expires.c>
+  ExpiresActive On
+  ExpiresByType text/css "access plus 1 year"
+  ExpiresByType application/javascript "access plus 1 year"
+  ExpiresByType image/svg+xml "access plus 1 year"
+  ExpiresByType image/png "access plus 1 year"
+  ExpiresByType image/jpeg "access plus 1 year"
+  ExpiresByType image/webp "access plus 1 year"
+</IfModule>

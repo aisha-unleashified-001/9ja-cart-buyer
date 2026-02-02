@@ -3,6 +3,7 @@ import { Star, MessageSquare } from 'lucide-react';
 import { Loading, Alert } from '../UI';
 import { cn } from '../../lib/utils';
 import { orderApi } from '../../api/order';
+import { useProductRatingsStore } from '../../store/useProductRatingsStore';
 import type { OrderRating } from '../../types';
 
 interface RatingDisplayProps {
@@ -21,7 +22,9 @@ export const RatingDisplay: React.FC<RatingDisplayProps> = ({ orderId, className
         setLoading(true);
         setError(null);
         const response = await orderApi.getOrderRatings(orderId);
-        setRatings(response.data || []);
+        const list = response.data || [];
+        setRatings(list);
+        useProductRatingsStore.getState().setRatingsFromOrder(list);
       } catch (err: any) {
         console.error('Failed to fetch ratings:', err);
         setError(err.message || 'Failed to load ratings');

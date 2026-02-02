@@ -3,51 +3,109 @@ import React from "react";
 const DisputePolicyPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-background">
-      {/* Header section styled like Privacy Policy */}
       <section className="py-20 px-4 bg-[#182F38]">
         <div className="container mx-auto max-w-6xl">
           <h1 className="text-3xl md:text-4xl font-bold text-center text-white">
-            Dispute Policy
+            Dispute Resolution Policy
           </h1>
         </div>
       </section>
 
-      {/* Centered content container with gray border */}
       <section className="py-16 px-4">
         <div className="container mx-auto max-w-3xl">
-          <div className="bg-card border border-gray-300 rounded-xl p-6 md:p-8 shadow-sm">
-            <h2 className="text-xl font-semibold mb-4">
-              Lorem ipsum dolor sit amet
-            </h2>
-            <p className="text-muted-foreground mb-4">
-              Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do
-              eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim
-              ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut
-              aliquip ex ea commodo consequat.
+          <div className="bg-card border border-gray-300 rounded-xl p-6 md:p-8 shadow-sm space-y-8 text-muted-foreground">
+            <p>
+              Our Dispute Resolution Policy at 9jacart.ng adheres to global standards such as the
+              UNCITRAL Model Law on International Commercial Conciliation and Nigeria's Arbitration
+              and Mediation Act 2023, emphasizing fair, efficient, and accessible mechanisms. We
+              prioritize amicable resolutions to maintain customer trust.
             </p>
 
-            <p className="text-muted-foreground mb-2">
-              Duis aute irure dolor in reprehenderit in voluptate velit esse
-              cillum dolore eu fugiat nulla pariatur:
-            </p>
-            <ul className="list-disc list-inside space-y-1 text-muted-foreground mb-4">
-              <li>Excepteur sint occaecat cupidatat non proident</li>
-              <li>Sunt in culpa qui officia deserunt mollit anim id est laborum</li>
-            </ul>
+            <div>
+              <h2 className="text-xl font-semibold text-foreground mb-4">Dispute Types and Initiation</h2>
+              <div className="space-y-4">
+                <div>
+                  <h3 className="font-medium text-foreground mb-2">Covered Disputes</h3>
+                  <p>
+                    Include issues related to product quality, delivery delays, billing errors, unauthorized
+                    transactions, or service failures. Excludes third-party disputes (e.g., with ride-hailing
+                    providers), which are escalated to them.
+                  </p>
+                </div>
 
-            <p className="text-muted-foreground mb-2">
-              Curabitur pretium tincidunt lacus nulla pharetra:
-            </p>
-            <ul className="list-disc list-inside space-y-1 text-muted-foreground mb-4">
-              <li>Nulla facilisi integer lacinia sollicitudin massa</li>
-              <li>Cras metus sed aliquet risus a tortor</li>
-              <li>Integer id quam orci ultricies congue</li>
-            </ul>
+                <div>
+                  <h3 className="font-medium text-foreground mb-2">Initiation Process</h3>
+                  <p className="mb-2">
+                    Raise disputes within 30 days of the issue via:
+                  </p>
+                  <ul className="list-disc list-inside space-y-1 ml-2">
+                    <li>User dashboard</li>
+                    <li>Email (disputes@9jacart.ng) or hotline</li>
+                  </ul>
+                  <p className="mt-2">
+                    Provide details, evidence (e.g., photos, receipts), and desired outcome.
+                  </p>
+                </div>
+              </div>
+            </div>
 
-            <p className="text-muted-foreground">
-              Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas
-              accumsan lacus vel facilisis. Egestas egestas fringilla phasellus
-              faucibus scelerisque eleifend donec pretium vulputate.
+            <div>
+              <h2 className="text-xl font-semibold text-foreground mb-4">Resolution Steps</h2>
+              <div className="space-y-4">
+                <div>
+                  <h3 className="font-medium text-foreground mb-2">Step 1: Internal Review (Tier 1)</h3>
+                  <p>
+                    Our support team acknowledges within 24 hours and investigates within 3 business days.
+                    Customer must respond with evidence within 1 business day. Resolutions include refunds,
+                    replacements, or credits.
+                  </p>
+                </div>
+
+                <div>
+                  <h3 className="font-medium text-foreground mb-2">Step 2: Escalation (Tier 2)</h3>
+                  <p>
+                    If unresolved, escalate to a senior mediator within 5 business days for a binding internal
+                    decision, incorporating customer feedback.
+                  </p>
+                </div>
+
+                <div>
+                  <h3 className="font-medium text-foreground mb-2">Step 3: Mediation/Arbitration (Tier 3)</h3>
+                  <p>
+                    For complex cases, we support mediation via independent neutrals (e.g., Lagos Multi-Door
+                    Courthouse). If needed, binding arbitration under Nigerian law, with costs shared between
+                    customer and vendor without prejudice to the independence of 9jaCart Limited.
+                  </p>
+                </div>
+
+                <div>
+                  <h3 className="font-medium text-foreground mb-2">Legal Recourse</h3>
+                  <p>
+                    If arbitration fails, disputes are resolved in courts with appropriate jurisdiction under
+                    Nigerian law. Class actions are absolutely waived.
+                  </p>
+                </div>
+
+                <div>
+                  <h3 className="font-medium text-foreground mb-2">Timelines and Protections</h3>
+                  <p>
+                    Full resolution targeted within 14–30 days. Customers receive updates every 5 days.
+                    Confidential data is protected per our Privacy Policy.
+                  </p>
+                </div>
+
+                <div>
+                  <h3 className="font-medium text-foreground mb-2">Fraud and Abuse</h3>
+                  <p>
+                    Frivolous disputes may result in account termination and/or legal action, but we assume
+                    good faith unless proven otherwise.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <p>
+              This policy ensures equitable outcomes, with a 95%+ resolution rate in internal tiers.
             </p>
           </div>
         </div>

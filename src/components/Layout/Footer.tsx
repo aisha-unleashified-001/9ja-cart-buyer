@@ -128,8 +128,8 @@ const Footer: React.FC = () => {
           <div>
             <h4 className="text-white font-semibold mb-4">Quick Links</h4>
             <ul className="space-y-2 text-sm">
-              <li><Link to="/privacy" className="text-gray-300 hover:text-white transition-colors">Privacy Policy</Link></li>
-              <li><Link to="/terms-of-use" className="text-gray-300 hover:text-white transition-colors">Terms Of Use</Link></li>
+              {/* <li><Link to="/privacy" className="text-gray-300 hover:text-white transition-colors">Privacy Policy</Link></li> */}
+              {/* <li><Link to="/terms-of-use" className="text-gray-300 hover:text-white transition-colors">Terms Of Use</Link></li> */}
               <li><Link to="/shipping-return-policy" className="text-gray-300 hover:text-white transition-colors">Shipping and return policy</Link></li>
               <li><Link to="/refund-policy" className="text-gray-300 hover:text-white transition-colors">Refund Policy</Link></li>
               <li><Link to="/dispute-policy" className="text-gray-300 hover:text-white transition-colors">Dispute Policy</Link></li>

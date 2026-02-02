@@ -404,6 +404,8 @@ export interface RateOrderResponse {
 export interface OrderRating {
   id: string;
   orderId: string;
+  /** When present, this rating is for a specific product (per-item order rating) */
+  productId?: string;
   vendorId: string;
   rating: number;
   comment: string;

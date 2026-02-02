@@ -4,6 +4,7 @@ import { Heart, Eye, ShoppingCart, Star } from "lucide-react";
 import { Button, Badge, Card, CardContent, Image } from "../UI";
 import { useCart } from "../../hooks/useCart";
 import { useWishlistStore } from "../../store/useWishlistStore";
+import { useProductRatingsStore } from "../../store/useProductRatingsStore";
 import type { Product, ProductSummary } from "../../types";
 import { cn } from "../../lib/utils";
 
@@ -29,8 +30,12 @@ const ProductCard: React.FC<ProductCardProps> = ({
 
   const isWishlisted = isItemInWishlist(product.id);
 
-  // Use product reviews (API ratings archived)
-  const displayReviews = product.reviews;
+  // Prefer order-based product ratings when available, else product.reviews
+  const productRatingFromStore = useProductRatingsStore((s) => s.getRating(product.id));
+  const displayReviews =
+    productRatingFromStore != null
+      ? { average: productRatingFromStore.average, total: productRatingFromStore.total }
+      : product.reviews;
 
   const handleAddToCart = async (e: React.MouseEvent) => {
     e.preventDefault();

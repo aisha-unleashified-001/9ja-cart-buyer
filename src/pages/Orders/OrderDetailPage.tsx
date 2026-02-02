@@ -15,6 +15,7 @@ import {
 import { Button, Card, CardContent, Badge, Loading, Alert, Image } from '../../components/UI';
 import { RatingModal } from '../../components/Rating';
 import { orderApi, type OrderDetailResponse } from '../../api/order';
+import { useProductRatingsStore } from '../../store/useProductRatingsStore';
 import { cn } from '../../lib/utils';
 
 const OrderDetailPage: React.FC = () => {
@@ -39,6 +40,14 @@ const OrderDetailPage: React.FC = () => {
         setError(null);
         const order = await orderApi.getOrderDetail(id);
         setOrderDetails(order);
+        // Fetch order ratings and merge into product ratings store for product cards
+        const orderIdForRatings = order.orderId || order.orderNumber || order.orderNo || id;
+        if (orderIdForRatings) {
+          orderApi.getOrderRatings(orderIdForRatings).then((res) => {
+            const list = res.data || [];
+            useProductRatingsStore.getState().setRatingsFromOrder(list);
+          }).catch(() => { /* ignore; ratings optional */ });
+        }
       } catch (err: any) {
         console.error('Failed to load order details:', err);
         setError(

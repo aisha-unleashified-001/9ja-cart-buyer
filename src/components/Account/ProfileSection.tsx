@@ -320,7 +320,7 @@ const ProfileSection: React.FC = () => {
             </Button>
             <Button 
               onClick={handleSaveChanges} 
-              className="bg-primary hover:bg-primary/90"
+              className="bg-primary hover:bg-primary/90 text-white"
               disabled={isUpdating}
             >
               {isUpdating ? 'Saving...' : 'Save Changes'}

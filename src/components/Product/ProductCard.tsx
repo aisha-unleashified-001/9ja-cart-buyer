@@ -5,6 +5,7 @@ import { Button, Badge, Card, CardContent, Image } from "../UI";
 import { useCart } from "../../hooks/useCart";
 import { useWishlistStore } from "../../store/useWishlistStore";
 import { useProductRatingsStore } from "../../store/useProductRatingsStore";
+import { useProductRatings } from "../../hooks/api/useProductRatings";
 import type { Product, ProductSummary } from "../../types";
 import { cn } from "../../lib/utils";
 
@@ -30,12 +31,16 @@ const ProductCard: React.FC<ProductCardProps> = ({
 
   const isWishlisted = isItemInWishlist(product.id);
 
-  // Prefer order-based product ratings when available, else product.reviews
+  // Fetch ratings from API
+  const { reviews: apiReviews } = useProductRatings(product.id);
+
+  // Priority order: API ratings > order-based ratings > product.reviews
   const productRatingFromStore = useProductRatingsStore((s) => s.getRating(product.id));
-  const displayReviews =
-    productRatingFromStore != null
-      ? { average: productRatingFromStore.average, total: productRatingFromStore.total }
-      : product.reviews;
+  const displayReviews = apiReviews != null
+    ? apiReviews
+    : productRatingFromStore != null
+    ? { average: productRatingFromStore.average, total: productRatingFromStore.total }
+    : product.reviews;
 
   const handleAddToCart = async (e: React.MouseEvent) => {
     e.preventDefault();

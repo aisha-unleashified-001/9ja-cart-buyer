@@ -53,6 +53,16 @@ export interface SingleProductResponse {
   data: ApiProductData;
 }
 
+export interface ProductRatingsResponse {
+  status: number;
+  error: boolean;
+  message: string;
+  data: {
+    totalRating: string;
+    ratingCount: string;
+  };
+}
+
 // Products API endpoints
 export const productsApi = {
   // Get products list (uses Basic Auth)
@@ -110,5 +120,17 @@ export const productsApi = {
    */
   trackProductView: async (productId: string): Promise<void> => {
     return apiClient.postNoBody(`/product/${productId}/track-view`, true);
+  },
+
+  /**
+   * Get product ratings (uses Basic Auth - public endpoint)
+   * GET /product/:productId/ratings
+   */
+  getProductRatings: async (productId: string): Promise<ProductRatingsResponse> => {
+    return apiClient.get<ProductRatingsResponse>(
+      `/product/${productId}/ratings`,
+      undefined,
+      false // Use Basic Auth for public ratings
+    );
   },
 };

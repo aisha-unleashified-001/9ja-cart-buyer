@@ -2,6 +2,7 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { ChevronRight, Loader2 } from "lucide-react";
 import { Button } from "../UI";
+import SectionHeader from "../UI/SectionHeader";
 import ProductCard from "../Product/ProductCard";
 import { useRecentlyViewedProducts } from "../../hooks/api/useRecentlyViewedProducts";
 import { normalizeProductImages } from "@/lib/utils";
@@ -27,11 +28,11 @@ const gridClass =
 
 /**
  * Recently Viewed Products section. Styled like Related Items.
- * Always renders the section; content varies by auth and API state.
- * - Not authenticated: "Sign in to see your recently viewed products" + CTA.
+ * Only renders when there are recently viewed products to show.
  * - Loading: spinner + message.
  * - Has products: product grid.
- * - No products: "No recently viewed products yet" + View All.
+ * - No products: section is hidden (not rendered).
+ * - Not authenticated: section is hidden.
  */
 const RecentlyViewedProductsSection: React.FC<
   RecentlyViewedProductsSectionProps
@@ -48,6 +49,11 @@ const RecentlyViewedProductsSection: React.FC<
     vendorId,
     limit,
   });
+
+  // Hide section when user has no recently viewed products (avoids empty state)
+  if (!loading && products.length === 0) {
+    return null;
+  }
 
   const viewAllLink = (
     <Link to="/products">
@@ -107,17 +113,8 @@ const RecentlyViewedProductsSection: React.FC<
     );
   };
 
-  const sectionHeader = (
-    <div className="flex items-center gap-4">
-      <div className="w-4 h-8 bg-primary rounded" />
-      <h2 className="text-2xl font-bold text-gray-900">
-        Recently Viewed
-      </h2>
-    </div>
-  );
-
-  const sectionSubtitle = (
-    <p className="text-muted-foreground mt-1">Your recently viewed items are waiting</p>
+  const sectionHeaderBlock = (
+    <SectionHeader text="Recently Viewed" subtitle="Your recently viewed items are waiting" />
   );
 
   if (variant === "section") {
@@ -129,8 +126,7 @@ const RecentlyViewedProductsSection: React.FC<
         <div className="max-w-7xl mx-auto px-4">
           <div className="flex items-center justify-between mb-12">
             <div>
-              <div className="mb-4">{sectionHeader}</div>
-              {sectionSubtitle}
+              {sectionHeaderBlock}
             </div>
             {isAuthenticated && products.length > 0 && (
               <div className="hidden sm:block">{viewAllLink}</div>
@@ -171,7 +167,7 @@ const RecentlyViewedProductsSection: React.FC<
       )}
       data-section="recently-viewed-products"
     >
-      {sectionHeader}
+      {sectionHeaderBlock}
 
       {loading && isAuthenticated ? (
         renderEmptyOrAuthState()

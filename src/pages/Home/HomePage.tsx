@@ -3,6 +3,7 @@ import HeroSection from "@/components/HomePage/HeroSection";
 import FeaturedProducts from "@/components/HomePage/FeaturedProducts";
 import LiveProducts from "@/components/HomePage/LiveProducts";
 import CategoryShowcase from "@/components/HomePage/CategoryShowcase";
+import FastSelling from "@/components/HomePage/FastSelling";
 import RecentlyViewedProductsSection from "@/components/HomePage/RecentlyViewedProductsSection";
 import { useAuthStore } from "@/store/useAuthStore";
 // import Newsletter from "@/components/HomePage/Newsletter";
@@ -16,22 +17,25 @@ const HomePage: React.FC = () => {
       {/* Hero Section */}
       <HeroSection />
 
-      {/* Flash Sales Section */}
+      {/* 1. Flash Sales */}
       <FlashSales />
 
-      {/* Category Showcase */}
+      {/* 2. Featured Picks */}
+      <FeaturedProducts />
+
+      {/* 3. All Products */}
+      <LiveProducts />
+
+      {/* 4. Shop by Category */}
       <CategoryShowcase />
 
-      {/* Recently Viewed Products - only when signed in */}
+      {/* 5. Fast Selling */}
+      <FastSelling />
+
+      {/* 6. Recently Viewed - only when signed in */}
       {isAuthenticated && (
         <RecentlyViewedProductsSection variant="section" />
       )}
-
-      {/* Featured Products (Mock Data) */}
-      <FeaturedProducts />
-
-      {/* Live Products (Real API Data) */}
-      <LiveProducts />
 
       {/* Newsletter Subscription */}
       {/* <Newsletter /> */}

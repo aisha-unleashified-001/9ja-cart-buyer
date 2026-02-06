@@ -24,6 +24,7 @@ import { useCart } from "../../hooks/useCart";
 import { useWishlistStore } from "../../store/useWishlistStore";
 import { useAuthStore } from "../../store/useAuthStore";
 import { useRealProduct, useRealProductsList } from "../../hooks/api/useRealProducts";
+import { useProductRatings } from "../../hooks/api/useProductRatings";
 import { productsApi } from "../../api/products";
 // import type { Product } from "../../types";
 import { cn, normalizeProductImages } from "../../lib/utils";
@@ -50,8 +51,11 @@ const ProductDetailPage: React.FC = () => {
     perPage: 50,
   });
 
-  // Use product reviews (API ratings archived)
-  const displayReviews = product?.reviews;
+  // Fetch ratings from API
+  const { reviews: apiReviews } = useProductRatings(id || null);
+  
+  // Use API reviews first, then fallback to product reviews
+  const displayReviews = apiReviews || product?.reviews;
 
   const [selectedImage, setSelectedImage] = useState(0);
   const [selectedColor, setSelectedColor] = useState<string>("");

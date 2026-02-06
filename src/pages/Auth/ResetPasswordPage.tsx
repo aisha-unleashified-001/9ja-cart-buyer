@@ -215,15 +215,28 @@ const ResetPasswordPage: React.FC = () => {
           <label htmlFor="confirm-password" className="block text-sm font-medium text-gray-700 mb-2">
             Confirm new password
           </label>
-          <Input
-            id="confirm-password"
-            type="password"
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-            placeholder="Confirm your password"
-            className="w-full !border-gray-400"
-            autoComplete="new-password"
-          />
+          <div className="relative">
+            <Input
+              id="confirm-password"
+              type={showPassword ? 'text' : 'password'}
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              placeholder="Confirm your password"
+              className="w-full pr-10 !border-gray-400"
+              autoComplete="new-password"
+            />
+            <button
+              type="button"
+              className="absolute inset-y-0 right-0 pr-3 flex items-center"
+              onClick={() => setShowPassword(!showPassword)}
+            >
+              {showPassword ? (
+                <EyeOff className="h-4 w-4 text-gray-400" />
+              ) : (
+                <Eye className="h-4 w-4 text-gray-400" />
+              )}
+            </button>
+          </div>
         </div>
 
         <div className="flex gap-3">

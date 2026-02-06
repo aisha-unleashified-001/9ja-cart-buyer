@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 
 import { Button, Loading, Alert } from "../UI";
+import SectionHeader from "../UI/SectionHeader";
 import { useAllRealCategories } from "../../hooks/api/useRealCategories";
 import type { Category } from "../../types";
 
@@ -72,14 +73,13 @@ const getCategoryIcon = (categoryName: string, categoryId?: string) => {
   return Package;
 };
 
-// Transform categories to include icons and featured status
+// Transform categories to include icons
 const transformCategories = (categories: Category[]) => {
   return categories
     .filter(cat => cat.level === 1 && !cat.archived) // Only show top-level categories that are not archived
-    .map((category, index) => ({
+    .map((category) => ({
       ...category,
       icon: getCategoryIcon(category.name, category.id),
-      featured: index === 2, // Make the 3rd category featured
     }));
 };
 
@@ -106,13 +106,7 @@ const CategoryShowcase: React.FC = () => {
       <section className="py-8 sm:py-12 lg:py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between mb-8">
-            <div>
-              <div className="flex items-center">
-                <div className="w-4 h-10 rounded bg-primary mr-2 flex-shrink-0"></div>
-                <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">Shop by Category</h2>
-              </div>
-              <p className="text-muted-foreground mt-2">Find best-selling products fast</p>
-            </div>
+            <SectionHeader text="Shop by Category" subtitle="Find products by their categories" />
           </div>
           
           <div className="flex items-center justify-center py-12">
@@ -129,13 +123,7 @@ const CategoryShowcase: React.FC = () => {
       <section className="py-8 sm:py-12 lg:py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between mb-8">
-            <div>
-              <div className="flex items-center">
-                <div className="w-4 h-10 rounded bg-primary mr-2 flex-shrink-0"></div>
-                <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">Shop by Category</h2>
-              </div>
-              <p className="text-muted-foreground mt-2">Find best-selling products fast</p>
-            </div>
+            <SectionHeader text="Shop by Category" subtitle="Find products by their categories" />
           </div>
           
           <Alert variant="destructive" className="max-w-md mx-auto">
@@ -156,14 +144,8 @@ const CategoryShowcase: React.FC = () => {
       <section className="py-8 sm:py-12 lg:py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between mb-8">
-          <div>
-            <div className="flex items-center">
-              <div className="w-4 h-10 rounded bg-primary mr-2 flex-shrink-0"></div>
-              <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">Shop by Category</h2>
-            </div>
-            <p className="text-muted-foreground mt-2">Find best-selling products fast</p>
+            <SectionHeader text="Shop by Category" subtitle="Find products by their categories" />
           </div>
-        </div>
         
         <div className="text-center py-12">
           <p className="text-gray-500">No categories available at the moment.</p>
@@ -178,13 +160,7 @@ const CategoryShowcase: React.FC = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
         <div className="flex items-center justify-between mb-8">
-          <div>
-            <div className="flex items-center">
-              <div className="w-4 h-10 rounded bg-primary mr-2 flex-shrink-0"></div>
-              <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">Shop by Category</h2>
-            </div>
-            <p className="text-muted-foreground mt-2 ">Find best-selling products fast</p>
-          </div>
+          <SectionHeader text="Shop by Category" subtitle="Find products by their categories" />
 
           {/* Navigation Arrows */}
           <div className="hidden sm:flex items-center gap-2">
@@ -226,30 +202,32 @@ const CategoryShowcase: React.FC = () => {
                     key={category.id}
                     to={`/category/${category.id}`}
                     state={{ categoryName: category.name }}
-                    className={`flex-shrink-0 w-[calc(100%/6-1rem)] group ${
-                      category.featured ? 'order-first' : ''
-                    }`}
+                    className="flex-shrink-0 w-[calc(100%/6-1rem)] group focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-lg"
                   >
                     <div
-                      className={`
+                      className="
                         relative p-6 rounded-lg border-2 transition-all duration-300 h-32 flex flex-col items-center justify-center
-                        ${category.featured 
-                          ? 'bg-primary border-primary text-white shadow-lg' 
-                          : 'bg-white border-gray-200 hover:border-primary hover:shadow-md group-hover:bg-gray-50'
-                        }
-                      `}
+                        bg-white border-gray-200
+                        group-hover:bg-primary group-hover:border-primary group-hover:shadow-lg
+                        group-focus-visible:bg-primary group-focus-visible:border-primary group-focus-visible:shadow-lg
+                        group-active:bg-primary/90 group-active:border-primary
+                      "
                     >
                       <IconComponent
-                        className={`
-                          w-8 h-8 mb-3 transition-transform duration-300 group-hover:scale-110
-                          ${category.featured ? 'text-white' : 'text-gray-600 group-hover:text-primary'}
-                        `}
+                        className="
+                          w-8 h-8 mb-3 transition-all duration-300 text-gray-600
+                          group-hover:text-white group-hover:scale-110
+                          group-focus-visible:text-white group-focus-visible:scale-110
+                          group-active:text-white
+                        "
                       />
                       <span
-                        className={`
-                          text-sm font-medium text-center
-                          ${category.featured ? 'text-white' : 'text-gray-900 group-hover:text-primary'}
-                        `}
+                        className="
+                          text-sm font-medium text-center text-gray-900 transition-colors duration-300
+                          group-hover:text-white
+                          group-focus-visible:text-white
+                          group-active:text-white
+                        "
                       >
                         {category.name}
                       </span>
@@ -270,28 +248,32 @@ const CategoryShowcase: React.FC = () => {
                     key={category.id}
                     to={`/category/${category.id}`}
                     state={{ categoryName: category.name }}
-                    className="flex-shrink-0 group"
+                    className="flex-shrink-0 group focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-lg"
                   >
                     <div
-                      className={`
+                      className="
                         relative p-4 rounded-lg border-2 transition-all duration-300 w-24 h-24 flex flex-col items-center justify-center
-                        ${category.featured 
-                          ? 'bg-primary border-primary text-white shadow-lg' 
-                          : 'bg-white border-gray-200 hover:border-primary hover:shadow-md'
-                        }
-                      `}
+                        bg-white border-gray-200
+                        group-hover:bg-primary group-hover:border-primary group-hover:shadow-lg
+                        group-focus-visible:bg-primary group-focus-visible:border-primary group-focus-visible:shadow-lg
+                        group-active:bg-primary/90 group-active:border-primary
+                      "
                     >
                       <IconComponent
-                        className={`
-                          w-6 h-6 mb-1 transition-transform duration-300 group-hover:scale-110
-                          ${category.featured ? 'text-white' : 'text-gray-600 group-hover:text-primary'}
-                        `}
+                        className="
+                          w-6 h-6 mb-1 transition-all duration-300 text-gray-600
+                          group-hover:text-white group-hover:scale-110
+                          group-focus-visible:text-white group-focus-visible:scale-110
+                          group-active:text-white
+                        "
                       />
                       <span
-                        className={`
-                          text-xs font-medium text-center leading-tight
-                          ${category.featured ? 'text-white' : 'text-gray-900 group-hover:text-primary'}
-                        `}
+                        className="
+                          text-xs font-medium text-center leading-tight text-gray-900 transition-colors duration-300
+                          group-hover:text-white
+                          group-focus-visible:text-white
+                          group-active:text-white
+                        "
                       >
                         {category.name}
                       </span>

@@ -6,29 +6,25 @@ import { Link } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import { normalizeProductImages } from "@/lib/utils";
 
-export default function FlashSales() {
-  // Get products from real API and filter for discounts
+export default function FastSelling() {
   const { products, loading, error, refetch } = useRealProductsList({ page: 1, perPage: 20 });
-  
-  // Filter products with discounts for flash sales
-  const flashSaleProducts = products
-    .filter((product) => {
-      const price = typeof product.price === 'object' ? product.price : null;
-      return price?.discount && price.discount.percentage > 0;
-    })
+
+  const fastSellingProducts = products
+    .filter((p) => p.flags?.bestseller)
     .slice(0, 4);
+  const displayProducts =
+    fastSellingProducts.length >= 4 ? fastSellingProducts : products.slice(0, 4);
 
   if (loading) {
     return (
       <section className="py-8 sm:py-12 bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="mb-8">
-            <SectionHeader text="Flash sales" subtitle="Explore products with remarkable discounts" />
+            <SectionHeader text="Fast Selling" subtitle="Popular items selling out quickly" />
           </div>
-
           <div className="flex items-center justify-center py-12">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            <span className="ml-2 text-muted-foreground">Loading fast selling products...</span>
+            <span className="ml-2 text-muted-foreground">Loading...</span>
           </div>
         </div>
       </section>
@@ -40,9 +36,8 @@ export default function FlashSales() {
       <section className="py-8 sm:py-12 bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="mb-8">
-            <SectionHeader text="Flash sales" subtitle="Explore products with remarkable discounts" />
+            <SectionHeader text="Fast Selling" subtitle="Popular items selling out quickly" />
           </div>
-
           <Alert variant="destructive" className="max-w-md mx-auto">
             <div className="flex flex-col items-center gap-4">
               <p>{error}</p>
@@ -56,22 +51,18 @@ export default function FlashSales() {
     );
   }
 
-  // Only show the section when there are discounted products (flash sales)
-  if (flashSaleProducts.length === 0) {
+  if (displayProducts.length === 0) {
     return null;
   }
 
   return (
     <section className="py-8 sm:py-12 bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header Section */}
         <div className="mb-8">
-          <SectionHeader text="Flash sales" subtitle="Explore products with remarkable discounts" />
+          <SectionHeader text="Fast Selling" subtitle="Popular items selling out quickly" />
         </div>
-
-        {/* Product Grid - Improved responsive layout */}
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
-          {flashSaleProducts.map((product) => (
+          {displayProducts.map((product) => (
             <ProductCard
               key={product.id}
               product={normalizeProductImages(product)}
@@ -79,8 +70,6 @@ export default function FlashSales() {
             />
           ))}
         </div>
-
-        {/* View All Button */}
         <div className="flex justify-center mt-8 sm:mt-12">
           <Link to="/products">
             <Button className="px-6 sm:px-8 py-2 sm:py-3 text-sm sm:text-base">

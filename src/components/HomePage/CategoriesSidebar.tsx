@@ -119,7 +119,7 @@ const CategoriesSidebar: React.FC<CategoriesSidebarProps> = ({ categories, showB
       <li key={category.id}>
         <div
           className={`
-            group relative text-sm cursor-pointer flex items-center justify-between p-2.5 rounded-md
+            group relative text-sm cursor-pointer flex items-center justify-between py-1.5 px-2 rounded-md
             transition-all duration-300 ease-in-out
             ${isSubcategory ? "ml-4 pl-4" : ""}
             text-gray-700 bg-transparent
@@ -158,7 +158,7 @@ const CategoriesSidebar: React.FC<CategoriesSidebarProps> = ({ categories, showB
         </div>
 
         {hasSubcategories && isExpanded && (
-          <ul className="mt-2 space-y-1">
+          <ul className="mt-1 space-y-0.5">
             {subcategories.map((subcat) => renderCategoryItem(subcat, true))}
           </ul>
         )}
@@ -172,7 +172,7 @@ const CategoriesSidebar: React.FC<CategoriesSidebarProps> = ({ categories, showB
       <aside className={`hidden lg:block lg:col-span-1 ${showBorderRight ? "border-r border-gray-200" : ""}`}>
         <div className="sticky top-4">
           <div className="h-[240px] sm:h-[300px] md:h-[360px] lg:h-[420px] overflow-y-auto scroll-smooth scrollbar-thin">
-            <ul className="space-y-2 lg:space-y-3 pr-4 lg:pr-6">
+            <ul className="space-y-0.5 pr-4 lg:pr-6">
               {mainCategories.map((category) => renderCategoryItem(category))}
             </ul>
           </div>

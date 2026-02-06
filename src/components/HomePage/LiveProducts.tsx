@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronRight, Loader2 } from 'lucide-react';
 import { Button, Alert } from '../UI';
+import SectionHeader from '../UI/SectionHeader';
 import ProductCard from '../Product/ProductCard';
 import { useRealProductsList } from '../../hooks/api/useRealProducts';
 import { normalizeProductImages } from '@/lib/utils';
@@ -21,13 +22,7 @@ const LiveProducts: React.FC = () => {
       <section className="py-16 bg-background">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="mb-12">
-            <div className="flex items-center justify-center mb-4">
-              <div className="w-4 h-10 rounded bg-primary mr-2"></div>
-              <h2 className="text-3xl font-bold text-foreground">All Products</h2>
-            </div>
-            <div className="text-center">
-              <p className="text-muted-foreground">Explore everything available — updated in real time</p>
-            </div>
+            <SectionHeader text="All Products" subtitle="Explore everything available — updated in real time" />
           </div>
           
           <div className="flex items-center justify-center py-12">
@@ -44,13 +39,7 @@ const LiveProducts: React.FC = () => {
       <section className="py-16 bg-background">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="mb-12">
-            <div className="flex items-center justify-center mb-4">
-              <div className="w-4 h-10 rounded bg-primary mr-2"></div>
-              <h2 className="text-3xl font-bold text-foreground">All Products</h2>
-            </div>
-            <div className="text-center">
-              <p className="text-muted-foreground">Error loading products</p>
-            </div>
+            <SectionHeader text="All Products" subtitle="Error loading products" />
           </div>
           
           <Alert variant="destructive" className="max-w-md mx-auto">
@@ -71,13 +60,7 @@ const LiveProducts: React.FC = () => {
       <section className="py-16 bg-background">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="mb-12">
-            <div className="flex items-center justify-center mb-4">
-              <div className="w-4 h-10 rounded bg-primary mr-2"></div>
-              <h2 className="text-3xl font-bold text-foreground">All Products</h2>
-            </div>
-            <div className="text-center">
-              <p className="text-muted-foreground">Explore everything available — updated in real time</p>
-            </div>
+            <SectionHeader text="All Products" subtitle="Explore everything available — updated in real time" />
           </div>
           
           <div className="text-center py-12">
@@ -93,13 +76,7 @@ const LiveProducts: React.FC = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
         <div className="flex items-center justify-between mb-12">
-          <div>
-            <div className="flex items-center mb-4">
-              <div className="w-4 h-10 rounded bg-primary mr-2"></div>
-              <h2 className="text-3xl font-bold text-foreground">All Products</h2>
-            </div>
-            <p className="text-muted-foreground">Explore everything available — updated in real time</p>
-          </div>
+          <SectionHeader text="All Products" subtitle="Explore everything available — updated in real time" />
           
           <Link to="/products">
             <Button variant="outline" className="hidden sm:flex items-center gap-2 hover:border-[#2ac12a]">

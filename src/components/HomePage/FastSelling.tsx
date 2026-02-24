@@ -20,11 +20,11 @@ export default function FastSelling() {
       <section className="py-8 sm:py-12 bg-gray-50">
         <div className=" mx-auto px-4 sm:px-6 lg:px-8">
           <div className="mb-8">
-            <SectionHeader text="Fast Selling" subtitle="Popular items selling out quickly" />
+            <SectionHeader text="Featured Picks" subtitle="Handpicked products you don't want to miss" />
           </div>
           <div className="flex items-center justify-center py-12">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            <span className="ml-2 text-muted-foreground">Loading...</span>
+            <span className="ml-2 text-muted-foreground">Loading featured products...</span>
           </div>
         </div>
       </section>
@@ -36,7 +36,7 @@ export default function FastSelling() {
       <section className="py-8 sm:py-12 bg-gray-50">
         <div className=" mx-auto px-4 sm:px-6 lg:px-8">
           <div className="mb-8">
-            <SectionHeader text="Fast Selling" subtitle="Popular items selling out quickly" />
+            <SectionHeader text="Featured Picks" subtitle="Handpicked products you don't want to miss" />
           </div>
           <Alert variant="destructive" className="max-w-md mx-auto">
             <div className="flex flex-col items-center gap-4">
@@ -59,12 +59,13 @@ export default function FastSelling() {
     <section className="py-8 sm:py-12 bg-gray-50">
       <div className=" mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mb-8">
-          <SectionHeader text="Fast Selling" subtitle="Popular items selling out quickly" />
+          <SectionHeader text="Featured Picks" subtitle="Handpicked products you don't want to miss" />
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
           {displayProducts.map((product) => (
             <ProductCard
               key={product.id}
+              eagerImages
               product={normalizeProductImages(product)}
               className="w-full"
             />

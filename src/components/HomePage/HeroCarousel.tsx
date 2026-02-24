@@ -108,7 +108,8 @@ const HeroCarousel: React.FC<HeroCarouselProps> = ({
                   src={slide.image}
                   alt={slide.title}
                   className="h-full w-full object-cover hover:scale-110 transition-transform duration-700"
-                  loading={idx === active ? 'eager' : 'lazy'}
+                  loading={idx === active ? "eager" : "lazy"}
+                  fetchPriority={idx === 0 ? "high" : undefined}
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
               </div>

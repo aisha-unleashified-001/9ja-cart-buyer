@@ -154,56 +154,64 @@
 
 
 
-import React, { useEffect } from "react";
+import React, { Suspense, lazy, useEffect } from "react";
 import { createBrowserRouter, RouterProvider, useLocation } from "react-router-dom";
 import Layout from "../components/Layout/Layout";
+import { Loading } from "../components/UI";
 
-// Page imports
+// HomePage eager - critical for fast reload
 import HomePage from "../pages/Home/HomePage";
-import ProductsPage from "../pages/Products/ProductsPage";
-import ProductDetailPage from "../pages/Products/ProductDetailPage";
-import DealsPage from "../pages/Products/DealsPage";
-import NewArrivalsPage from "../pages/Products/NewArrivalsPage";
-import BestSellersPage from "../pages/Products/BestSellersPage";
-import VendorStorefrontPage from "../pages/Vendor/VendorStorefrontPage";
-import CartPage from "../pages/Cart/CartPage";
-import CheckoutPage from "../pages/Checkout/CheckoutPage";
-import OrdersPage from "../pages/Orders/OrdersPage";
-import OrderDetailPage from "../pages/Orders/OrderDetailPage";
-import TrackOrderPage from "../pages/Orders/TrackOrderPage";
-import RateOrderPage from "../pages/Orders/RateOrderPage";
 
-// Account pages
-import AccountPage from "../pages/Account/AccountPage";
-import WishlistPage from "../pages/Account/WishlistPage";
-import ContactAdminPage from "../pages/Account/ContactAdminPage";
-
-// Auth pages
-import { LoginPage, RegisterPage, RegistrationSuccessPage, ResetPasswordPage, VerifyEmailPage } from "../pages/Auth";
-
-// Support pages
-import ContactPage from "../pages/Support/ContactPage";
-import FAQPage from "../pages/Support/FAQPage";
-import TermsPage from "../pages/Support/TermsPage";
-import PrivacyPolicyPage from "../pages/Support/PrivacyPolicyPage";
-import TermsOfUsePage from "../pages/Support/TermsOfUsePage";
-import ShippingReturnPolicyPage from "../pages/Support/ShippingReturnPolicyPage";
-import RefundPolicyPage from "../pages/Support/RefundPolicyPage";
-import DisputePolicyPage from "../pages/Support/DisputePolicyPage";
-
-// Additional pages
-import CategoryPage from "../pages/Categories/CategoryPage";
-import SearchResultsPage from "../pages/Search/SearchResultsPage";
-import NotFoundPage from "../pages/Error/NotFoundPage";
-import UIComponentsDemo from "../pages/Demo/UIComponentsDemo";
-
-// Services pages
-import { ServicesLandingPage, ServicesPage } from "../pages/Services";
+// Route-level code splitting: lazy load non-home routes for smaller initial bundle
+const ProductsPage = lazy(() => import("../pages/Products/ProductsPage"));
+const ProductDetailPage = lazy(() => import("../pages/Products/ProductDetailPage"));
+const DealsPage = lazy(() => import("../pages/Products/DealsPage"));
+const NewArrivalsPage = lazy(() => import("../pages/Products/NewArrivalsPage"));
+const BestSellersPage = lazy(() => import("../pages/Products/BestSellersPage"));
+const VendorStorefrontPage = lazy(() => import("../pages/Vendor/VendorStorefrontPage"));
+const CartPage = lazy(() => import("../pages/Cart/CartPage"));
+const CheckoutPage = lazy(() => import("../pages/Checkout/CheckoutPage"));
+const OrdersPage = lazy(() => import("../pages/Orders/OrdersPage"));
+const OrderDetailPage = lazy(() => import("../pages/Orders/OrderDetailPage"));
+const TrackOrderPage = lazy(() => import("../pages/Orders/TrackOrderPage"));
+const RateOrderPage = lazy(() => import("../pages/Orders/RateOrderPage"));
+const AccountPage = lazy(() => import("../pages/Account/AccountPage"));
+const WishlistPage = lazy(() => import("../pages/Account/WishlistPage"));
+const ContactAdminPage = lazy(() => import("../pages/Account/ContactAdminPage"));
+const ContactPage = lazy(() => import("../pages/Support/ContactPage"));
+const FAQPage = lazy(() => import("../pages/Support/FAQPage"));
+const TermsPage = lazy(() => import("../pages/Support/TermsPage"));
+const PrivacyPolicyPage = lazy(() => import("../pages/Support/PrivacyPolicyPage"));
+const TermsOfUsePage = lazy(() => import("../pages/Support/TermsOfUsePage"));
+const ShippingReturnPolicyPage = lazy(() => import("../pages/Support/ShippingReturnPolicyPage"));
+const RefundPolicyPage = lazy(() => import("../pages/Support/RefundPolicyPage"));
+const DisputePolicyPage = lazy(() => import("../pages/Support/DisputePolicyPage"));
+const CategoryPage = lazy(() => import("../pages/Categories/CategoryPage"));
+const SearchResultsPage = lazy(() => import("../pages/Search/SearchResultsPage"));
+const NotFoundPage = lazy(() => import("../pages/Error/NotFoundPage"));
+const UIComponentsDemo = lazy(() => import("../pages/Demo/UIComponentsDemo"));
+const ServicesLandingPage = lazy(() => import("../pages/Services").then((m) => ({ default: m.ServicesLandingPage })));
+const ServicesPage = lazy(() => import("../pages/Services").then((m) => ({ default: m.ServicesPage })));
+const LoginPage = lazy(() => import("../pages/Auth").then((m) => ({ default: m.LoginPage })));
+const RegisterPage = lazy(() => import("../pages/Auth").then((m) => ({ default: m.RegisterPage })));
+const RegistrationSuccessPage = lazy(() => import("../pages/Auth").then((m) => ({ default: m.RegistrationSuccessPage })));
+const ResetPasswordPage = lazy(() => import("../pages/Auth").then((m) => ({ default: m.ResetPasswordPage })));
+const VerifyEmailPage = lazy(() => import("../pages/Auth").then((m) => ({ default: m.VerifyEmailPage })));
+const AboutPage = lazy(() => import("@/pages/About/page"));
 
 // Layout components
 import AuthLayout from "../components/Layout/AuthLayout";
 import { ProtectedRoute } from "../components/Auth";
-import AboutPage from "@/pages/About/page";
+
+const PageFallback = () => (
+  <div className="flex items-center justify-center min-h-[50vh]">
+    <Loading size="lg" />
+  </div>
+);
+
+const withSuspense = (Node: React.ReactNode) => (
+  <Suspense fallback={<PageFallback />}>{Node}</Suspense>
+);
 
 // Scroll to Top Component
 const ScrollToTop: React.FC = () => {
@@ -252,39 +260,39 @@ const router = createBrowserRouter([
       },
       {
         path: "products",
-        element: <ProductsPage />,
+        element: withSuspense(<ProductsPage />),
       },
       {
         path: "products/:id",
-        element: <ProductDetailPage />,
+        element: withSuspense(<ProductDetailPage />),
       },
       {
         path: "deals",
-        element: <DealsPage />,
+        element: withSuspense(<DealsPage />),
       },
       {
         path: "new-arrivals",
-        element: <NewArrivalsPage />,
+        element: withSuspense(<NewArrivalsPage />),
       },
       {
         path: "bestsellers",
-        element: <BestSellersPage />,
+        element: withSuspense(<BestSellersPage />),
       },
       {
         path: "vendor/:vendorId",
-        element: <VendorStorefrontPage />,
+        element: withSuspense(<VendorStorefrontPage />),
       },
       {
         path: "cart",
-        element: <CartPage />,
+        element: withSuspense(<CartPage />),
       },
       {
         path: "checkout",
-        element: <CheckoutPage />,
+        element: withSuspense(<CheckoutPage />),
       },
       {
         path: "orders",
-        element: (
+        element: withSuspense(
           <ProtectedRoute>
             <OrdersPage />
           </ProtectedRoute>
@@ -292,7 +300,7 @@ const router = createBrowserRouter([
       },
       {
         path: "orders/:id",
-        element: (
+        element: withSuspense(
           <ProtectedRoute>
             <OrderDetailPage />
           </ProtectedRoute>
@@ -300,7 +308,7 @@ const router = createBrowserRouter([
       },
       {
         path: "track-order/:id",
-        element: (
+        element: withSuspense(
           <ProtectedRoute>
             <TrackOrderPage />
           </ProtectedRoute>
@@ -308,7 +316,7 @@ const router = createBrowserRouter([
       },
       {
         path: "rate-order/:orderId",
-        element: (
+        element: withSuspense(
           <ProtectedRoute>
             <RateOrderPage />
           </ProtectedRoute>
@@ -317,7 +325,7 @@ const router = createBrowserRouter([
       // Account routes
       {
         path: "account",
-        element: (
+        element: withSuspense(
           <ProtectedRoute>
             <AccountPage />
           </ProtectedRoute>
@@ -325,7 +333,7 @@ const router = createBrowserRouter([
       },
       {
         path: "wishlist",
-        element: (
+        element: withSuspense(
           <ProtectedRoute>
             <WishlistPage />
           </ProtectedRoute>
@@ -333,7 +341,7 @@ const router = createBrowserRouter([
       },
       {
         path: "contact-admin",
-        element: (
+        element: withSuspense(
           <ProtectedRoute>
             <ContactAdminPage />
           </ProtectedRoute>
@@ -342,67 +350,67 @@ const router = createBrowserRouter([
       // Support routes
       {
         path: "contact",
-        element: <ContactPage />,
+        element: withSuspense(<ContactPage />),
       },
       {
         path: "terms",
-        element: <TermsPage />,
+        element: withSuspense(<TermsPage />),
       },
       {
         path: "privacy",
-        element: <PrivacyPolicyPage />,
+        element: withSuspense(<PrivacyPolicyPage />),
       },
       {
         path: "terms-of-use",
-        element: <TermsOfUsePage />,
+        element: withSuspense(<TermsOfUsePage />),
       },
       {
         path: "shipping-return-policy",
-        element: <ShippingReturnPolicyPage />,
+        element: withSuspense(<ShippingReturnPolicyPage />),
       },
       {
         path: "refund-policy",
-        element: <RefundPolicyPage />,
+        element: withSuspense(<RefundPolicyPage />),
       },
       {
         path: "dispute-policy",
-        element: <DisputePolicyPage />,
+        element: withSuspense(<DisputePolicyPage />),
       },
       {
         path: "about",
-        element: <AboutPage />,
+        element: withSuspense(<AboutPage />),
       },
       {
         path: "faq",
-        element: <FAQPage />,
+        element: withSuspense(<FAQPage />),
       },
       // Services routes
       {
         path: "services",
-        element: <ServicesLandingPage />,
+        element: withSuspense(<ServicesLandingPage />),
       },
       {
         path: "services/:subcategory",
-        element: <ServicesPage />,
+        element: withSuspense(<ServicesPage />),
       },
       // Category and search routes
       {
         path: "category/:categoryId",
-        element: <CategoryPage />,
+        element: withSuspense(<CategoryPage />),
       },
       {
         path: "search",
-        element: <SearchResultsPage />,
+        element: withSuspense(<SearchResultsPage />),
       },
       // Demo route (for development)
       {
         path: "demo",
-        element: <UIComponentsDemo />,
+        element: withSuspense(<UIComponentsDemo />),
       },
       // 404 catch-all
       {
         path: "*",
-        element: <NotFoundPage />,
+        element: withSuspense(<NotFoundPage />),
       },
     ],
   },
@@ -413,23 +421,23 @@ const router = createBrowserRouter([
     children: [
       {
         path: "login",
-        element: <LoginPage />,
+        element: withSuspense(<LoginPage />),
       },
       {
         path: "register",
-        element: <RegisterPage />,
+        element: withSuspense(<RegisterPage />),
       },
       {
         path: "registration-success",
-        element: <RegistrationSuccessPage />,
+        element: withSuspense(<RegistrationSuccessPage />),
       },
       {
         path: "reset-password",
-        element: <ResetPasswordPage />,
+        element: withSuspense(<ResetPasswordPage />),
       },
       {
         path: "verify-email",
-        element: <VerifyEmailPage />,
+        element: withSuspense(<VerifyEmailPage />),
       },
     ],
   },

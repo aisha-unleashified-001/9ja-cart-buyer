@@ -1,3 +1,8 @@
+/**
+ * Archived: This section is no longer used on the homepage.
+ * "Featured Picks" is now provided by FastSelling (fast-selling products with the title "Featured Picks").
+ * Kept for reference or potential reuse elsewhere.
+ */
 import React from "react";
 import { Link } from "react-router-dom";
 import { ChevronRight, Loader2 } from "lucide-react";
@@ -75,10 +80,11 @@ const FeaturedProducts: React.FC = () => {
         </div>
 
         {/* Products Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
           {featuredProducts.map((product) => (
             <ProductCard
               key={product.id}
+              eagerImages
               product={normalizeProductImages(product)}
               showQuickAdd={true}
               className="h-full"

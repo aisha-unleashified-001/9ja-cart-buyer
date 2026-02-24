@@ -176,11 +176,16 @@ const ProductDetailPage: React.FC = () => {
     });
 
     // If we have matches, use them; otherwise fall back to candidates from same categoryId
-    const finalList = matched.length > 0 
+    let finalList = matched.length > 0 
       ? matched 
       : candidates.filter((relatedProduct) => 
           relatedProduct.categoryId === product.categoryId
         );
+
+    // Final fallback: show any other products if no category/tag matches
+    if (finalList.length === 0) {
+      finalList = candidates;
+    }
 
     return finalList.slice(0, 4);
   }, [product, relatedProducts]);
@@ -290,6 +295,7 @@ const ProductDetailPage: React.FC = () => {
                 }
                 alt={product.images.alt}
                 className="w-full h-full object-contain"
+                lazy={false}
               />
             </div>
 
@@ -310,6 +316,7 @@ const ProductDetailPage: React.FC = () => {
                     src={image}
                     alt={`${product.name} view ${index + 1}`}
                     className="w-full h-full object-contain"
+                    lazy={false}
                   />
                 </button>
               ))}

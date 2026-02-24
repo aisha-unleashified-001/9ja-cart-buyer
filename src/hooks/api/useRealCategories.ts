@@ -5,6 +5,10 @@ import {
   combineWithServicesCategories,
 } from "../../utils/category-mappers";
 import { apiErrorUtils } from "../../utils/api-errors";
+import {
+  loadCategoriesFromSession,
+  saveCategoriesToSession,
+} from "../../lib/sessionCache";
 import type { Category } from "../../types";
 
 // Hook for fetching real categories list
@@ -99,47 +103,77 @@ export const useRealCategories = (initialParams: CategoriesListParams = {}) => {
   };
 };
 
+// Module-level in-memory cache for categories - survives navigation (SPA)
+const CATEGORIES_MEMORY_TTL_MS = 5 * 60 * 1000; // 5 minutes
+let categoriesMemoryCache: { categories: Category[]; ts: number } | null = null;
+let categoriesFetchPromise: Promise<void> | null = null;
+
+function getMemoryCachedCategories(): Category[] | null {
+  if (
+    categoriesMemoryCache &&
+    Date.now() - categoriesMemoryCache.ts < CATEGORIES_MEMORY_TTL_MS
+  ) {
+    return categoriesMemoryCache.categories;
+  }
+  return null;
+}
+
+function initCategoriesFromStorage(): Category[] {
+  // Use in-memory first (navigation back), then sessionStorage (reload)
+  const mem = getMemoryCachedCategories();
+  if (mem) return mem;
+  const session = loadCategoriesFromSession();
+  if (session) return session.categories as Category[];
+  return [];
+}
+
 // Hook for getting all categories (fetch all pages) - Stable version
+// Module-level cache means navigate-back shows data instantly, no loading state
 export const useAllRealCategories = () => {
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [loading, setLoading] = useState(true);
+  const initialCategories = initCategoriesFromStorage();
+  const hasCached = initialCategories.length > 0;
+
+  const [categories, setCategories] = useState<Category[]>(initialCategories);
+  const [loading, setLoading] = useState(!hasCached);
   const [error, setError] = useState<string | null>(null);
-  const hasFetchedRef = useRef(false);
 
   const fetchAllCategories = useCallback(async () => {
-    if (hasFetchedRef.current) return; // Prevent multiple calls
-    
-    console.log("🚀 Fetching all categories (stable version)");
-    setLoading(true);
+    // Re-use in-flight request if one is already running (StrictMode, concurrent mounts)
+    if (categoriesFetchPromise) {
+      await categoriesFetchPromise;
+      return;
+    }
+
+    // Already have fresh memory cache — show it, no fetch needed
+    if (getMemoryCachedCategories()) return;
+
+    if (!hasCached) setLoading(true);
     setError(null);
 
-    try {
-      hasFetchedRef.current = true; // Set before API call
-      const response = await categoriesApi.getCategories({ page: 1, perPage: 100 });
+    categoriesFetchPromise = (async () => {
+      try {
+        const response = await categoriesApi.getCategories({ page: 1, perPage: 100 });
+        const mappedCategories = mapApiCategoriesToCategories(response.data);
+        const allCategories = combineWithServicesCategories(mappedCategories);
 
-      // Map API response to internal types
-      const mappedCategories = mapApiCategoriesToCategories(response.data);
-      
-      // Combine with services categories
-      const allCategories = combineWithServicesCategories(mappedCategories);
+        categoriesMemoryCache = { categories: allCategories, ts: Date.now() };
+        saveCategoriesToSession({ categories: allCategories, ts: Date.now() });
+        setCategories(allCategories);
+      } catch (err) {
+        const errorMessage = apiErrorUtils.getErrorMessage(err);
+        setError(errorMessage);
+        const servicesOnly = combineWithServicesCategories([]);
+        categoriesMemoryCache = { categories: servicesOnly, ts: Date.now() };
+        setCategories(servicesOnly);
+      } finally {
+        setLoading(false);
+        categoriesFetchPromise = null;
+      }
+    })();
 
-      setCategories(allCategories);
-      console.log("✅ Loaded", allCategories.length, "categories (stable version)");
-    } catch (err) {
-      const errorMessage = apiErrorUtils.getErrorMessage(err);
-      setError(errorMessage);
-      console.error("❌ Failed to fetch categories (stable version):", errorMessage);
-      
-      // Fallback to services categories only if API fails
-      const servicesOnly = combineWithServicesCategories([]);
-      setCategories(servicesOnly);
-      console.log("🔄 Fallback: Using services categories only (stable version)");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+    await categoriesFetchPromise;
+  }, [hasCached]);
 
-  // Load categories on mount - only once
   useEffect(() => {
     fetchAllCategories();
   }, [fetchAllCategories]);

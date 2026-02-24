@@ -169,12 +169,13 @@ const CheckoutPage: React.FC = () => {
       icon: <Shield className="w-5 h-5" />,
       disabled: true,
     },
-    {
-      id: "emergency-credit",
-      name: "Emergency Credit",
-      icon: <Shield className="w-5 h-5" />,
-      disabled: true,
-    },
+    // Hidden for now - Emergency Credit
+    // {
+    //   id: "emergency-credit",
+    //   name: "Emergency Credit",
+    //   icon: <Shield className="w-5 h-5" />,
+    //   disabled: true,
+    // },
   ];
 
   // Use filtered values from cart (already exclude unavailable products)

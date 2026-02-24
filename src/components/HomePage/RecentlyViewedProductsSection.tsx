@@ -143,6 +143,7 @@ const RecentlyViewedProductsSection: React.FC<
                     key={product.id}
                     product={normalizeProductImages(product)}
                     showQuickAdd={showQuickAdd}
+                    eagerImages
                     className="w-full"
                   />
                 ))}
@@ -178,6 +179,7 @@ const RecentlyViewedProductsSection: React.FC<
               key={product.id}
               product={normalizeProductImages(product)}
               showQuickAdd={showQuickAdd}
+              eagerImages
               className="w-full"
             />
           ))}

@@ -127,10 +127,15 @@ export const mapApiProductToProduct = (apiProduct: ApiProductData): Product => {
     trackQuantity: true,
   };
 
-  // Create images object
+  // Create images object — handle both 'images' and 'productImages' (single-product API may differ)
+  const rawImages = Array.isArray((apiProduct as Record<string, unknown>).images)
+    ? (apiProduct as Record<string, unknown>).images as string[]
+    : Array.isArray((apiProduct as Record<string, unknown>).productImages)
+    ? (apiProduct as Record<string, unknown>).productImages as string[]
+    : [];
   const images: ProductMedia = {
-    main: apiProduct.images[0] || '/placeholder-product.jpg',
-    gallery: apiProduct.images,
+    main: (rawImages[0] && typeof rawImages[0] === 'string' ? rawImages[0] : null) || '/placeholder-product.jpg',
+    gallery: rawImages.filter((u): u is string => typeof u === 'string'),
     alt: apiProduct.productName,
     videos: [], // API doesn't provide videos
   };
@@ -234,9 +239,14 @@ export const mapApiProductToProductSummary = (apiProduct: ApiProductData): Produ
         : 'out_of_stock' as const,
   };
 
-  // Create images summary
+  // Create images summary — handle both 'images' and 'productImages'
+  const rawImages = Array.isArray((apiProduct as Record<string, unknown>).images)
+    ? (apiProduct as Record<string, unknown>).images as string[]
+    : Array.isArray((apiProduct as Record<string, unknown>).productImages)
+    ? (apiProduct as Record<string, unknown>).productImages as string[]
+    : [];
   const images = {
-    main: apiProduct.images[0] || '/placeholder-product.jpg',
+    main: (rawImages[0] && typeof rawImages[0] === 'string' ? rawImages[0] : null) || '/placeholder-product.jpg',
     alt: apiProduct.productName,
   };
 

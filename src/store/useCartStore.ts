@@ -670,14 +670,8 @@ export const useCartStore = create<CartStore>()(
   },
 
   getSubtotal: (isAuthenticated: boolean) => {
-    if (isAuthenticated) {
-      // Use subtotal from server summary if available for accuracy
-      const { serverSummary } = get();
-      if (serverSummary?.subtotal !== undefined) {
-        return serverSummary.subtotal;
-      }
-    }
-    // For guest users or when server summary is not available, calculate from items
+    // Always calculate from live items so the total updates immediately
+    // when quantities are changed via optimistic updates.
     return get().getTotalPrice(isAuthenticated);
   },
 
@@ -712,10 +706,9 @@ export const useCartStore = create<CartStore>()(
       // Calculate commission from percentage if available
       const { serverSummary } = get();
       if (serverSummary?.platformCommissionPercentage !== undefined) {
-        // Use server's subtotal from summary for accuracy, fallback to calculated subtotal
-        const subtotal = serverSummary.subtotal ?? get().getSubtotal(isAuthenticated);
+        // Use the live calculated subtotal so commission updates with quantity changes
+        const subtotal = get().getSubtotal(isAuthenticated);
         const commissionPercentage = serverSummary.platformCommissionPercentage;
-        // Calculate commission: subtotal * (percentage / 100)
         return subtotal * (commissionPercentage / 100);
       }
     }

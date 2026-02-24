@@ -1,5 +1,5 @@
 import SectionHeader from "../UI/SectionHeader";
-import { useRealProductsList } from "../../hooks/api/useRealProducts";
+import { useBuyerActiveProductsList } from "../../hooks/api/useRealProducts";
 import { ProductCard } from "../Product";
 import { Button, Alert } from "../UI";
 import { Link } from "react-router-dom";
@@ -7,28 +7,30 @@ import { Loader2 } from "lucide-react";
 import { normalizeProductImages } from "@/lib/utils";
 
 export default function FlashSales() {
-  // Get products from real API and filter for discounts
-  const { products, loading, error, refetch } = useRealProductsList({ page: 1, perPage: 20 });
+  // Fetch all products across pages so we can show every discounted product
+  const { allProducts, loading, error, refetch } = useBuyerActiveProductsList({});
   
-  // Filter products with discounts for flash sales
-  const flashSaleProducts = products
+  // Filter products with discounts for flash sales — include both discount object and price comparison
+  const flashSaleProducts = allProducts
     .filter((product) => {
       const price = typeof product.price === 'object' ? product.price : null;
-      return price?.discount && price.discount.percentage > 0;
-    })
-    .slice(0, 4);
+      if (!price) return false;
+      const hasDiscountBadge = price.discount && price.discount.percentage > 0;
+      const hasPriceReduction = price.original != null && price.current < price.original;
+      return hasDiscountBadge || hasPriceReduction;
+    });
 
   if (loading) {
     return (
       <section className="py-8 sm:py-12 bg-gray-50">
         <div className="mx-auto px-4 sm:px-6 lg:px-8">
           <div className="mb-8">
-            <SectionHeader text="Flash sales" subtitle="Explore products with remarkable discounts" />
+            <SectionHeader text="Today's deal" subtitle="Explore products with remarkable discounts" />
           </div>
 
           <div className="flex items-center justify-center py-12">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            <span className="ml-2 text-muted-foreground">Loading fast selling products...</span>
+            <span className="ml-2 text-muted-foreground">Loading today's deals...</span>
           </div>
         </div>
       </section>
@@ -40,7 +42,7 @@ export default function FlashSales() {
       <section className="py-8 sm:py-12 bg-gray-50">
         <div className="mx-auto px-4 sm:px-6 lg:px-8">
           <div className="mb-8">
-            <SectionHeader text="Flash sales" subtitle="Explore products with remarkable discounts" />
+            <SectionHeader text="Today's deal" subtitle="Explore products with remarkable discounts" />
           </div>
 
           <Alert variant="destructive" className="max-w-md mx-auto">
@@ -66,7 +68,7 @@ export default function FlashSales() {
       <div className="mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header Section */}
         <div className="mb-8">
-          <SectionHeader text="Flash sales" subtitle="Explore products with remarkable discounts" />
+          <SectionHeader text="Today's deal" subtitle="Explore products with remarkable discounts" />
         </div>
 
         {/* Product Grid - Improved responsive layout */}
@@ -75,6 +77,8 @@ export default function FlashSales() {
             <ProductCard
               key={product.id}
               product={normalizeProductImages(product)}
+              eagerImages
+              highlightAsFlashSale
               className="w-full"
             />
           ))}

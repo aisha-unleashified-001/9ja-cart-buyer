@@ -13,12 +13,16 @@ import { formatPrice } from "../../lib/productUtils";
 interface ProductCardProps {
   product: ProductSummary | Product;
   showQuickAdd?: boolean;
+  eagerImages?: boolean;
+  highlightAsFlashSale?: boolean;
   className?: string;
 }
 
 const ProductCard: React.FC<ProductCardProps> = ({
   product,
   showQuickAdd = true,
+  eagerImages = false,
+  highlightAsFlashSale = false,
   className,
 }) => {
   const { addToCart } = useCart();
@@ -27,14 +31,15 @@ const ProductCard: React.FC<ProductCardProps> = ({
     removeItem: removeFromWishlist,
     isItemInWishlist,
   } = useWishlistStore();
-  const [imageLoading, setImageLoading] = useState(true);
+  const [imageLoading, setImageLoading] = useState(!eagerImages);
   const [addedToCart, setAddedToCart] = useState(false);
   const [isAddingToCart, setIsAddingToCart] = useState(false);
 
   const isWishlisted = isItemInWishlist(product.id);
 
-  // Fetch ratings from API
-  const { reviews: apiReviews } = useProductRatings(product.id);
+  // On homepage (eagerImages), skip live ratings API call — product already has review data
+  // from the products list response. This prevents 20-80 concurrent requests on homepage load.
+  const { reviews: apiReviews } = useProductRatings(product.id, !eagerImages);
 
   // Priority order: API ratings > order-based ratings > product.reviews
   const productRatingFromStore = useProductRatingsStore((s) => s.getRating(product.id));
@@ -277,7 +282,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
 
             {/* Product Image */}
             <div className="relative aspect-square bg-gray-50 overflow-hidden">
-              {imageLoading && (
+              {imageLoading && !eagerImages && (
                 <div className="absolute inset-0 bg-gray-100 animate-pulse" />
               )}
               <Image
@@ -287,10 +292,11 @@ const ProductCard: React.FC<ProductCardProps> = ({
                     : product.images.main
                 }
                 alt={product.name || "Product image"}
+                lazy={!eagerImages}
                 className={cn(
                   "w-full h-full object-cover transition-all duration-300",
                   "group-hover:scale-105",
-                  imageLoading ? "opacity-0" : "opacity-100"
+                  !eagerImages && imageLoading ? "opacity-0" : "opacity-100"
                 )}
                 onLoad={() => setImageLoading(false)}
                 onError={() => setImageLoading(false)}

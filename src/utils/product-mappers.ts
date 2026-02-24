@@ -128,10 +128,11 @@ export const mapApiProductToProduct = (apiProduct: ApiProductData): Product => {
   };
 
   // Create images object — handle both 'images' and 'productImages' (single-product API may differ)
-  const rawImages = Array.isArray((apiProduct as Record<string, unknown>).images)
-    ? (apiProduct as Record<string, unknown>).images as string[]
-    : Array.isArray((apiProduct as Record<string, unknown>).productImages)
-    ? (apiProduct as Record<string, unknown>).productImages as string[]
+  const apiProductUnknown = apiProduct as unknown as Record<string, unknown>;
+  const rawImages = Array.isArray(apiProductUnknown.images)
+    ? (apiProductUnknown.images as string[])
+    : Array.isArray(apiProductUnknown.productImages)
+    ? (apiProductUnknown.productImages as string[])
     : [];
   const images: ProductMedia = {
     main: (rawImages[0] && typeof rawImages[0] === 'string' ? rawImages[0] : null) || '/placeholder-product.jpg',
@@ -240,10 +241,11 @@ export const mapApiProductToProductSummary = (apiProduct: ApiProductData): Produ
   };
 
   // Create images summary — handle both 'images' and 'productImages'
-  const rawImages = Array.isArray((apiProduct as Record<string, unknown>).images)
-    ? (apiProduct as Record<string, unknown>).images as string[]
-    : Array.isArray((apiProduct as Record<string, unknown>).productImages)
-    ? (apiProduct as Record<string, unknown>).productImages as string[]
+  const apiProductUnknown = apiProduct as unknown as Record<string, unknown>;
+  const rawImages = Array.isArray(apiProductUnknown.images)
+    ? (apiProductUnknown.images as string[])
+    : Array.isArray(apiProductUnknown.productImages)
+    ? (apiProductUnknown.productImages as string[])
     : [];
   const images = {
     main: (rawImages[0] && typeof rawImages[0] === 'string' ? rawImages[0] : null) || '/placeholder-product.jpg',

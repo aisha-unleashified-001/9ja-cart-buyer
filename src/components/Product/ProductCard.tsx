@@ -22,7 +22,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
   product,
   showQuickAdd = true,
   eagerImages = false,
-  highlightAsFlashSale = false,
+  // highlightAsFlashSale accepted via props for future use; not destructured to avoid unused-variable error
   className,
 }) => {
   const { addToCart } = useCart();

@@ -17,6 +17,13 @@ const HomePage: React.FC = () => {
       <Helmet>
         <title>9ja-cart - Buy and Sell Online in Nigeria</title>
         <meta name="description" content="Shop top deals on food, gadgets, electronics, fashion & lifestyle products at 9jaCart.ng — Nigeria's trusted Buy Now Pay Later online store. Fast delivery, secure checkout & affordable prices" />
+        <meta property="og:type" content="website" />
+        <meta property="og:title" content="9ja-cart - Buy and Sell Online in Nigeria" />
+        <meta property="og:description" content="Shop top deals on food, gadgets, electronics, fashion & lifestyle products at 9jaCart.ng — Nigeria's trusted Buy Now Pay Later online store. Fast delivery, secure checkout & affordable prices" />
+        <meta property="og:url" content="https://www.9jacart.ng" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="9ja-cart - Buy and Sell Online in Nigeria" />
+        <meta name="twitter:description" content="Shop top deals on food, gadgets, electronics, fashion & lifestyle products at 9jaCart.ng — Nigeria's trusted Buy Now Pay Later online store. Fast delivery, secure checkout & affordable prices" />
         <link rel="icon" type="image/svg+xml" href="/9Jacart Icon SVG.svg" />
       </Helmet>
       <HeroSection />

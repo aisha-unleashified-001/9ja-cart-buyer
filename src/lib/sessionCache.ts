@@ -6,9 +6,11 @@
 
 const PRODUCTS_KEY = "9ja-buyer-products-cache";
 const CATEGORIES_KEY = "9ja-buyer-categories-cache";
+const PRODUCT_DETAIL_KEY = "9ja-buyer-product-detail-cache";
 // Max age before a session-storage entry is evicted entirely (prevents very old data persisting)
 const PRODUCTS_MAX_AGE_MS = 30 * 60 * 1000; // 30 minutes
 const CATEGORIES_MAX_AGE_MS = 30 * 60 * 1000; // 30 minutes
+const PRODUCT_DETAIL_MAX_AGE_MS = 30 * 60 * 1000; // 30 minutes
 
 function isStorageAvailable(): boolean {
   try {
@@ -86,6 +88,45 @@ export function saveCategoriesToSession(entry: CategoriesCacheEntry): void {
   if (!isStorageAvailable()) return;
   try {
     sessionStorage.setItem(CATEGORIES_KEY, JSON.stringify(entry));
+  } catch {
+    // ignore
+  }
+}
+
+// Single product detail cache (by product id) for instant reload on product page
+export type ProductDetailCacheEntry = { product: unknown; ts: number };
+
+export function loadProductDetailFromSession(productId: string): ProductDetailCacheEntry | null {
+  if (!isStorageAvailable() || !productId) return null;
+  try {
+    const raw = sessionStorage.getItem(PRODUCT_DETAIL_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Record<string, ProductDetailCacheEntry>;
+    const entry = parsed[productId];
+    if (!entry?.product || !entry?.ts) return null;
+    if (Date.now() - entry.ts >= PRODUCT_DETAIL_MAX_AGE_MS) return null;
+    return entry;
+  } catch {
+    return null;
+  }
+}
+
+export function saveProductDetailToSession(
+  productId: string,
+  entry: ProductDetailCacheEntry
+): void {
+  if (!isStorageAvailable() || !productId) return;
+  try {
+    const raw = sessionStorage.getItem(PRODUCT_DETAIL_KEY);
+    const parsed: Record<string, ProductDetailCacheEntry> = raw ? JSON.parse(raw) : {};
+    const now = Date.now();
+    // Evict old entries when saving
+    const cleaned: Record<string, ProductDetailCacheEntry> = {};
+    for (const [id, val] of Object.entries(parsed)) {
+      if (val?.ts && now - val.ts < PRODUCT_DETAIL_MAX_AGE_MS) cleaned[id] = val;
+    }
+    cleaned[productId] = entry;
+    sessionStorage.setItem(PRODUCT_DETAIL_KEY, JSON.stringify(cleaned));
   } catch {
     // ignore
   }

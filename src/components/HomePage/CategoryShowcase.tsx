@@ -102,16 +102,25 @@ const CategoryShowcase: React.FC = () => {
   };
 
   if (loading) {
+    // Show non-blocking skeletons instead of a spinner so the
+    // section layout appears instantly without a loading indicator.
     return (
       <section className="py-8 sm:py-12 lg:py-16">
         <div className=" mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between mb-8">
-            <SectionHeader text="Shop by Category" subtitle="Find products by their categories" />
+            <SectionHeader
+              text="Shop by Category"
+              subtitle="Find products by their categories"
+            />
           </div>
-          
-          <div className="flex items-center justify-center py-12">
-            <Loading size="lg" />
-            <span className="ml-2 text-muted-foreground">Loading categories...</span>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+            {Array.from({ length: 6 }).map((_, index) => (
+              <div
+                key={index}
+                className="h-32 rounded-lg border-2 border-gray-200 bg-gray-100 animate-pulse"
+              />
+            ))}
           </div>
         </div>
       </section>

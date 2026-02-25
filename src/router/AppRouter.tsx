@@ -209,6 +209,11 @@ const PageFallback = () => (
   </div>
 );
 
+/** Product detail: no spinner, tall white space so footer stays below viewport while chunk loads */
+const ProductDetailFallback = () => (
+  <div className="min-h-[100vh] w-full" aria-hidden />
+);
+
 const withSuspense = (Node: React.ReactNode) => (
   <Suspense fallback={<PageFallback />}>{Node}</Suspense>
 );
@@ -264,7 +269,11 @@ const router = createBrowserRouter([
       },
       {
         path: "products/:id",
-        element: withSuspense(<ProductDetailPage />),
+        element: (
+          <Suspense fallback={<ProductDetailFallback />}>
+            <ProductDetailPage />
+          </Suspense>
+        ),
       },
       {
         path: "deals",

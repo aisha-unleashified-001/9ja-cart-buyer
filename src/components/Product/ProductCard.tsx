@@ -9,6 +9,7 @@ import { useProductRatings } from "../../hooks/api/useProductRatings";
 import type { Product, ProductSummary } from "../../types";
 import { cn } from "../../lib/utils";
 import { formatPrice } from "../../lib/productUtils";
+import { preloadProductDetailPage } from "../../lib/preloadProductDetail";
 
 interface ProductCardProps {
   product: ProductSummary | Product;
@@ -244,7 +245,12 @@ const ProductCard: React.FC<ProductCardProps> = ({
       )}
     >
       <CardContent className="p-0 h-full flex flex-col">
-        <Link to={`/products/${product.id}`} className="block h-full flex flex-col">
+        <Link
+          to={`/products/${product.id}`}
+          className="block h-full flex flex-col"
+          onMouseEnter={preloadProductDetailPage}
+          onFocus={preloadProductDetailPage}
+        >
           <div className="relative">
             {/* Discount Badge */}
             {discount && discount.percentage > 0 && (

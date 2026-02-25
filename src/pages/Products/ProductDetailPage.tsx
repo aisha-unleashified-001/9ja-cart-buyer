@@ -16,10 +16,10 @@ import {
   Badge,
   Card,
   CardContent,
-  Loading,
   Alert,
   Image,
 } from "../../components/UI";
+import { useLayoutContext } from "@/contexts/LayoutContext";
 import { useCart } from "../../hooks/useCart";
 import { useWishlistStore } from "../../store/useWishlistStore";
 import { useAuthStore } from "../../store/useAuthStore";
@@ -36,6 +36,7 @@ import { useNotificationContext } from "../../providers/NotificationProvider";
 const ProductDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { setHideFooter } = useLayoutContext();
   const { addToCart } = useCart();
   const { showNotification } = useNotificationContext();
   const { isAuthenticated } = useAuthStore();
@@ -43,6 +44,16 @@ const ProductDetailPage: React.FC = () => {
 
   // Use real API hook
   const { product, loading, error } = useRealProduct(id || null);
+
+  // Hide footer until product is ready so the page "just shows up" with content (no footer flash)
+  useEffect(() => {
+    if (loading && !product) {
+      setHideFooter(true);
+    } else {
+      setHideFooter(false);
+    }
+    return () => setHideFooter(false);
+  }, [loading, product, setHideFooter]);
   
   // Fetch a broader pool of products for better tag-based matching across categories
   // We'll filter by categoryName and tags in the filtering logic
@@ -204,16 +215,9 @@ const ProductDetailPage: React.FC = () => {
     ));
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen p-6">
-        <div className=" mx-auto">
-          <div className="flex items-center justify-center py-12">
-            <Loading size="lg" />
-          </div>
-        </div>
-      </div>
-    );
+  // Tall white space only (no spinner); footer hidden via context so it stays below viewport
+  if (loading && !product) {
+    return <div className="min-h-[100vh] w-full" aria-hidden />;
   }
 
   if (error || !product) {
@@ -244,7 +248,7 @@ const ProductDetailPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 max-w-[960px] lg:max-w-7xl 2xl:max-w-[1550px] mx-auto">
-      <div className=" mx-auto px-4 py-6">
+      <div className=" mx-auto px-4 py-6 min-h-[70vh]">
         {/* Breadcrumb */}
         <Breadcrumb items={breadcrumbItems} className="mb-6" />
 
@@ -253,7 +257,7 @@ const ProductDetailPage: React.FC = () => {
           {/* Product Images */}
           <div className="space-y-4">
             {/* Main Image */}
-            <div className="aspect-square bg-white rounded-lg border overflow-hidden relative">
+            <div className="aspect-square max-h-[500px] w-full bg-white rounded-lg border overflow-hidden relative">
               {/* Discount Badge Overlay */}
               {discount && (
                 <div className="absolute top-4 right-4 z-10">

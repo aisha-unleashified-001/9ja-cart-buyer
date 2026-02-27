@@ -568,9 +568,11 @@ const ProductDetailPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Product Details Section */}
-        <Card className="mt-8">
-          <CardContent className="p-0">
+        {/* Product Details & Rating Section */}
+        <div className="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+          {/* Product Details Section */}
+          <Card>
+            <CardContent className="p-0">
             <div className="border-b border-gray-200">
               <div className="flex overflow-x-auto">
                 {[
@@ -660,6 +662,18 @@ const ProductDetailPage: React.FC = () => {
                       Shipping Information
                     </h3>
                     <div className="space-y-3 text-gray-700">
+                      <p>
+                        We partner with trusted carriers like UPS and local couriers to deliver orders
+                        across Nigeria and to select international destinations.
+                      </p>
+
+                      <ul className="list-disc list-inside space-y-1 ml-2">
+                        <li><span className="font-medium">Within Lagos:</span> Typically 1–3 business days after the vendor hands over your order.</li>
+                        <li><span className="font-medium">Other major cities:</span> Usually 2–7 business days (48 hours for eligible perishable items).</li>
+                        <li><span className="font-medium">Remote areas:</span> Around 7–14 business days from vendor dispatch.</li>
+                        <li><span className="font-medium">Diaspora shipments:</span> Estimated 7–21 business days, depending on customs.</li>
+                      </ul>
+
                       {product.shipping.freeShipping && (
                         <p className="flex items-center gap-2">
                           <Badge variant="success">Free Shipping</Badge>
@@ -667,17 +681,17 @@ const ProductDetailPage: React.FC = () => {
                       )}
                       {product.shipping.weight && (
                         <p>
-                          <span className="font-medium">Weight:</span> {product.shipping.weight} {product.shipping.dimensions?.unit || 'kg'}
+                          <span className="font-medium">Package weight:</span> {product.shipping.weight} {product.shipping.dimensions?.unit || 'kg'}
                         </p>
                       )}
                       {product.shipping.dimensions && (
                         <p>
-                          <span className="font-medium">Dimensions:</span> {product.shipping.dimensions.length} × {product.shipping.dimensions.width} × {product.shipping.dimensions.height} {product.shipping.dimensions.unit}
+                          <span className="font-medium">Package dimensions:</span> {product.shipping.dimensions.length} × {product.shipping.dimensions.width} × {product.shipping.dimensions.height} {product.shipping.dimensions.unit}
                         </p>
                       )}
                       {product.shipping.shippingClass && (
                         <p>
-                          <span className="font-medium">Shipping Class:</span> {product.shipping.shippingClass}
+                          <span className="font-medium">Shipping class:</span> {product.shipping.shippingClass}
                         </p>
                       )}
                       {product.shipping.restrictions && product.shipping.restrictions.length > 0 && (
@@ -691,7 +705,7 @@ const ProductDetailPage: React.FC = () => {
                         </div>
                       )}
                       <p>
-                        <span className="font-medium">Delivery:</span> Delivery fees will be paid upon product arrival.
+                        <span className="font-medium">Delivery fees:</span> All fees and any applicable customs or taxes are clearly shown at checkout.
                       </p>
                     </div>
                   </div>
@@ -706,10 +720,10 @@ const ProductDetailPage: React.FC = () => {
                       {product.returns.returnable ? (
                         <>
                           <p>
-                            <span className="font-medium">Returnable:</span> Yes
+                            <span className="font-medium">Returnable:</span> Most eligible items can be returned within our standard window.
                           </p>
                           <p>
-                            <span className="font-medium">Return Period:</span> {product.returns.period} {product.returns.unit}
+                            <span className="font-medium">Return period:</span> Typically 30 days from delivery, provided the item is unused, in original packaging, and with all tags/accessories intact. Some categories (like perishables or personalized items) may have different rules.
                           </p>
                           {product.returns.free && (
                             <p>
@@ -730,8 +744,8 @@ const ProductDetailPage: React.FC = () => {
                       ) : (
                         <p>This product is not returnable.</p>
                       )}
-                      <p className="pt-2 border-t border-gray-100">
-                        A dispute for a dissatisfied item must be opened within 3 days of delivery.
+                      <p>
+                        <span className="font-medium">How to start a return:</span> Log into your account, go to your orders, and select "Return Item" within the allowed window.
                       </p>
                       {product.warranty && (
                         <div className="pt-2 border-t border-gray-100">
@@ -740,106 +754,120 @@ const ProductDetailPage: React.FC = () => {
                           </p>
                         </div>
                       )}
+                      <div className="pt-4 border-t border-gray-100">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="bg-white border-[#2ac12a] text-gray-900 hover:bg-[#8DEB6E] hover:text-[#1E4700] hover:border-[#2ac12a]"
+                          onClick={() => navigate("/shipping-return-policy")}
+                        >
+                          View full Shipping & Return policy
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 </div>
               )}
             </div>
           </CardContent>
-        </Card>
+          </Card>
 
-        {/* Product Rating Section */}
-        <Card className="mt-8">
-          <CardContent className="p-6">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">Product Rating</h2>
-            
-            {displayReviews && (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {/* Rating Summary */}
-                <div className="md:col-span-1 flex flex-col items-center justify-center border-r border-gray-200 pr-6">
-                  <div className="text-5xl font-bold text-gray-900 mb-2">
-                    {displayReviews.average.toFixed(1)}
+          {/* Product Rating Section */}
+          <Card>
+            <CardContent className="p-6">
+              <h2 className="text-2xl font-bold text-gray-900 mb-6">Product Rating</h2>
+              
+              {displayReviews && (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  {/* Rating Summary */}
+                  <div className="md:col-span-1 flex flex-col items-center justify-center border-r border-gray-200 pr-6">
+                    <div className="text-5xl font-bold text-gray-900 mb-2">
+                      {displayReviews.average.toFixed(1)}
+                    </div>
+                    <div className="flex items-center gap-1 mb-2">
+                      {renderStars(displayReviews.average)}
+                    </div>
+                    <div className="text-sm text-gray-600">
+                      {displayReviews.total} rating{displayReviews.total !== 1 ? 's' : ''}
+                    </div>
+                    <div className="mt-4 text-center">
+                      <p className="text-xs text-gray-500">
+                        Ratings from purchases
+                      </p>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-1 mb-2">
-                    {renderStars(displayReviews.average)}
-                  </div>
-                  <div className="text-sm text-gray-600">
-                    {displayReviews.total} rating{displayReviews.total !== 1 ? 's' : ''}
-                  </div>
-                  <div className="mt-4 text-center">
-                    <p className="text-xs text-gray-500">
-                      Ratings from purchases
-                    </p>
-                  </div>
-                </div>
 
-                {/* Rating Breakdown */}
-                <div className="md:col-span-2 space-y-3">
-                  {displayReviews.breakdown && (
-                    <>
-                      {[5, 4, 3, 2, 1].map((stars) => {
-                        const count = displayReviews.breakdown?.[stars as keyof typeof displayReviews.breakdown] || 0;
-                        const percentage = displayReviews.total > 0 
-                          ? (count / displayReviews.total) * 100 
-                          : 0;
-                      
-                      return (
-                        <div key={stars} className="flex items-center gap-3">
-                          <span className="text-sm font-medium text-gray-700 w-12">
-                            {stars} star{stars > 1 ? 's' : ''}
-                          </span>
-                          <div className="flex-1 h-4 bg-gray-200 rounded-full overflow-hidden">
-                            <div
-                              className="h-full bg-yellow-400 transition-all"
-                              style={{ width: `${percentage}%` }}
-                            />
+                  {/* Rating Breakdown */}
+                  <div className="md:col-span-2 space-y-3">
+                    {displayReviews.breakdown && (
+                      <>
+                        {[5, 4, 3, 2, 1].map((stars) => {
+                          const count = displayReviews.breakdown?.[stars as keyof typeof displayReviews.breakdown] || 0;
+                          const percentage = displayReviews.total > 0 
+                            ? (count / displayReviews.total) * 100 
+                            : 0;
+                        
+                        return (
+                          <div key={stars} className="flex items-center gap-3">
+                            <span className="text-sm font-medium text-gray-700 w-12">
+                              {stars} star{stars > 1 ? 's' : ''}
+                            </span>
+                            <div className="flex-1 h-4 bg-gray-200 rounded-full overflow-hidden">
+                              <div
+                                className="h-full bg-yellow-400 transition-all"
+                                style={{ width: `${percentage}%` }}
+                              />
+                            </div>
+                            <span className="text-sm text-gray-600 w-12 text-right">
+                              {count}
+                            </span>
                           </div>
-                          <span className="text-sm text-gray-600 w-12 text-right">
-                            {count}
-                          </span>
-                        </div>
-                      );
-                    })}
-                  </>
-                )}
-                </div>
-              </div>
-            )}
-            
-            {!displayReviews && (
-              <div className="text-center py-8">
-                <div className="flex justify-center mb-4">
-                  <div className="flex items-center gap-1">
-                    {Array.from({ length: 5 }, (_, i) => (
-                      <Star
-                        key={i}
-                        className="w-6 h-6 text-gray-300"
-                      />
-                    ))}
+                        );
+                      })}
+                    </>
+                  )}
                   </div>
                 </div>
-                <p className="text-gray-600 mb-4">No ratings yet</p>
-                <p className="text-sm text-gray-500 mb-4">
-                  Be the first to rate this product after purchase.
+              )}
+              
+              {!displayReviews && (
+                <div className="text-center py-8">
+                  <div className="flex justify-center mb-4">
+                    <div className="flex items-center gap-1">
+                      {Array.from({ length: 5 }, (_, i) => (
+                        <Star
+                          key={i}
+                          className="w-6 h-6 text-gray-300"
+                        />
+                      ))}
+                    </div>
+                  </div>
+                  <p className="text-gray-600 mb-4">No ratings yet</p>
+                  <p className="text-sm text-gray-500 mb-4">
+                    Be the first to rate this product after purchase.
+                  </p>
+                </div>
+              )}
+              
+              <div className="pt-4 mt-4 border-t border-gray-200">
+                <p className="text-sm text-gray-600 mb-3">
+                  <strong>Rate this product:</strong> After purchasing and receiving this item, 
+                  you can rate and review your experience in your order history.
                 </p>
+                {isAuthenticated && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => navigate('/orders')}
+                    className="flex items-center gap-2 bg-white border-[#2ac12a] text-gray-900 hover:bg-[#8DEB6E] hover:text-[#1E4700] hover:border-[#2ac12a]"
+                  >
+                    View My Orders
+                  </Button>
+                )}
               </div>
-            )}
-            
-            <div className="pt-4 mt-4 border-t border-gray-200">
-              <p className="text-sm text-gray-600 mb-3">
-                <strong>Rate this product:</strong> After purchasing and receiving this item, 
-                you can rate and review your experience in your order history.
-              </p>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => navigate('/orders')}
-              >
-                View My Orders
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </div>
 
         {/* Related Items */}
         {filteredRelatedProducts.length > 0 && (

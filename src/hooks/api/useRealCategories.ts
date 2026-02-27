@@ -138,14 +138,25 @@ export const useAllRealCategories = () => {
   const [error, setError] = useState<string | null>(null);
 
   const fetchAllCategories = useCallback(async () => {
-    // Re-use in-flight request if one is already running (StrictMode, concurrent mounts)
+    // Re-use in-flight request if one is already running (StrictMode, concurrent mounts).
+    // After it completes, sync this instance's state from the shared cache so sidebar + Shop by Category both render.
     if (categoriesFetchPromise) {
       await categoriesFetchPromise;
+      const cached = getMemoryCachedCategories();
+      if (cached) {
+        setCategories(cached);
+        setLoading(false);
+      }
       return;
     }
 
-    // Already have fresh memory cache — show it, no fetch needed
-    if (getMemoryCachedCategories()) return;
+    // Already have fresh memory cache — sync this instance and skip fetch so first load shows immediately when cache exists.
+    const cached = getMemoryCachedCategories();
+    if (cached) {
+      setCategories(cached);
+      setLoading(false);
+      return;
+    }
 
     if (!hasCached) setLoading(true);
     setError(null);
@@ -172,6 +183,12 @@ export const useAllRealCategories = () => {
     })();
 
     await categoriesFetchPromise;
+    // Sync this instance from cache in case this is the only consumer (no re-render from the promise's setState yet).
+    const afterCached = getMemoryCachedCategories();
+    if (afterCached) {
+      setCategories(afterCached);
+      setLoading(false);
+    }
   }, [hasCached]);
 
   useEffect(() => {

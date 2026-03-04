@@ -35,11 +35,25 @@ const WishlistItemComponent: React.FC<WishlistItemProps> = ({ item }) => {
   };
 
   const formatDate = (date: Date) => {
-    return new Intl.DateTimeFormat('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    }).format(new Date(date));
+    const d = new Date(date);
+
+    try {
+      if (typeof Intl !== 'undefined' && typeof Intl.DateTimeFormat === 'function') {
+        return new Intl.DateTimeFormat('en-US', {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric',
+        }).format(d);
+      }
+    } catch {
+      // If Intl or this locale is not supported, fall back below.
+    }
+
+    if (typeof d.toLocaleDateString === 'function') {
+      return d.toLocaleDateString();
+    }
+
+    return d.toDateString();
   };
 
   const renderStars = (rating: number) => {

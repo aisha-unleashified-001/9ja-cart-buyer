@@ -1,18 +1,32 @@
-import type { 
-  Product, 
-  ProductSummary, 
-  ProductWithRelations, 
-  Category, 
+import type {
+  Product,
+  ProductSummary,
+  ProductWithRelations,
+  Category,
   Seller,
-  PriceWithDiscount 
+  PriceWithDiscount
 } from '../types';
 
 // Price utilities
 export const formatPrice = (price: number, currency: string = 'NGN'): string => {
-  return new Intl.NumberFormat('en-NG', {
-    style: 'currency',
-    currency,
-  }).format(price);
+  const safePrice = Number.isFinite(price) ? price : 0;
+
+  try {
+    if (typeof Intl !== 'undefined' && typeof Intl.NumberFormat === 'function') {
+      return new Intl.NumberFormat('en-NG', {
+        style: 'currency',
+        currency,
+      }).format(safePrice);
+    }
+  } catch {
+    // If Intl or the specific locale/currency is not supported,
+    // fall back to a simple string format below.
+  }
+
+  const symbol = currency === 'NGN' ? '₦' : '';
+  const formatted = safePrice.toFixed(2);
+
+  return symbol ? `${symbol}${formatted}` : `${formatted} ${currency}`;
 };
 
 export const calculateDiscountedPrice = (price: PriceWithDiscount): number => {

@@ -2,6 +2,7 @@ import { useAuthStore } from '../store/useAuthStore';
 import { useCartStore } from '../store/useCartStore';
 import { useNotificationContext } from '../providers/NotificationProvider';
 import type { Product } from '../types';
+import { formatPrice } from '../lib/productUtils';
 
 /**
  * Clean cart hook that handles both guest and authenticated users
@@ -83,18 +84,9 @@ export const useCart = () => {
     tax,
     total: finalTotal,
     itemCount: totalItems,
-    formattedSubtotal: new Intl.NumberFormat("en-NG", {
-      style: "currency",
-      currency: "NGN",
-    }).format(subtotal),
-    formattedShipping: new Intl.NumberFormat("en-NG", {
-      style: "currency", 
-      currency: "NGN",
-    }).format(shipping),
-    formattedTotal: new Intl.NumberFormat("en-NG", {
-      style: "currency",
-      currency: "NGN", 
-    }).format(finalTotal),
+    formattedSubtotal: formatPrice(subtotal),
+    formattedShipping: formatPrice(shipping),
+    formattedTotal: formatPrice(finalTotal),
   });
 
   return {

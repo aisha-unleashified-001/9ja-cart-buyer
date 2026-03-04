@@ -298,7 +298,9 @@ const ProductDetailPage: React.FC = () => {
                   product.images.gallery[selectedImage] || product.images.main
                 }
                 alt={product.images.alt}
-                className="w-full h-full object-contain"
+                className="w-full h-full object-top"
+                aspectRatio="auto"
+                objectFit="contain"
                 lazy={false}
               />
             </div>
@@ -319,7 +321,9 @@ const ProductDetailPage: React.FC = () => {
                   <Image
                     src={image}
                     alt={`${product.name} view ${index + 1}`}
-                    className="w-full h-full object-contain"
+                    className="w-full h-full object-top"
+                    aspectRatio="auto"
+                    objectFit="contain"
                     lazy={false}
                   />
                 </button>

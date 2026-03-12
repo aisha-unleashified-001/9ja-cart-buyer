@@ -20,6 +20,11 @@ export default function FlashSales() {
       return hasDiscountBadge || hasPriceReduction;
     });
 
+  // Ensure we don't show the same product twice, even if it appears multiple times in allProducts
+  const uniqueFlashSaleProducts = Array.from(
+    new Map(flashSaleProducts.map((product) => [product.id, product])).values()
+  );
+
   if (loading) {
     return (
       <section className="py-8 sm:py-12 bg-gray-50">
@@ -73,7 +78,7 @@ export default function FlashSales() {
 
         {/* Product Grid - Improved responsive layout */}
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
-          {flashSaleProducts.map((product) => (
+          {uniqueFlashSaleProducts.map((product) => (
             <ProductCard
               key={product.id}
               product={normalizeProductImages(product)}

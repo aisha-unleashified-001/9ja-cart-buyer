@@ -97,23 +97,44 @@ const parseVendorLogo = (vendorLogo?: string): string | undefined => {
 // Map API product data to internal Product type
 export const mapApiProductToProduct = (apiProduct: ApiProductData): Product => {
   const unitPrice = parseFloat(apiProduct.unitPrice);
+  const apiOldPrice = parseFloat((apiProduct as unknown as { oldPrice?: string | number }).oldPrice as string ?? '0');
   const discountValue = parseFloat(apiProduct.discountValue);
   const discountPrice = parseFloat(apiProduct.discountPrice);
-  const apiTotalPrice = typeof apiProduct.totalPrice === 'number' ? apiProduct.totalPrice : undefined;
-  
-  // When discountValue is 0, there's no discount - use unitPrice as current price
-  const hasDiscount = discountValue > 0 && discountPrice < unitPrice;
+  // totalPrice may come back as a string or number depending on the endpoint;
+  // treat NaN (from bad values) the same as absent — fall through to the price-field fallback.
+  const rawTotalPrice = (apiProduct as unknown as { totalPrice?: number | string }).totalPrice;
+  const parsedTotalPrice =
+    typeof rawTotalPrice === 'number'
+      ? rawTotalPrice
+      : typeof rawTotalPrice === 'string'
+        ? parseFloat(rawTotalPrice)
+        : undefined;
+  const apiTotalPrice = (parsedTotalPrice !== undefined && !isNaN(parsedTotalPrice))
+    ? parsedTotalPrice
+    : undefined;
 
-  // Use server-provided totalPrice as the displayed price; fall back to discountPrice or unitPrice
-  const effectiveCurrentPrice = apiTotalPrice ?? (hasDiscount ? discountPrice : unitPrice);
+  // A genuine price reduction exists whenever discountPrice is strictly less than unitPrice.
+  // We intentionally do NOT require discountValue > 0 here because some endpoints (e.g. the
+  // category endpoint) return discountValue="0" even for products that carry a real discount,
+  // while still sending a lower discountPrice.
+  const hasPriceReduction = discountPrice > 0 && discountPrice < unitPrice;
+  const hasDiscount = hasPriceReduction;
+
+  // When the API provides an explicit oldPrice, use it as the "original" (strikethrough) price.
+  // Fall back to unitPrice for backwards compatibility when oldPrice is missing.
+  const originalForDisplay = apiOldPrice > 0 && !isNaN(apiOldPrice) ? apiOldPrice : unitPrice;
+
+  // Priority: server-provided totalPrice (most authoritative) → discountPrice when lower → unitPrice
+  const effectiveCurrentPrice = apiTotalPrice ?? (hasPriceReduction ? discountPrice : unitPrice);
   
   // Create price object
   const price: PriceWithDiscount = {
     current: effectiveCurrentPrice,
-    original: hasDiscount ? unitPrice : undefined,
+    original: hasDiscount ? originalForDisplay : undefined,
     currency: 'NGN',
     discount: hasDiscount ? {
-      // Prefer the API-provided discountValue (exact %) over recalculation to avoid rounding away sub-1% discounts
+      // Prefer the API-provided discountValue (exact %) over recalculation; fall back to
+      // calculating from the price difference when discountValue is absent/zero.
       percentage: discountValue > 0 ? discountValue : calculateDiscountPercentage(unitPrice, discountPrice),
       amount: unitPrice - discountPrice,
       validUntil: undefined,
@@ -218,22 +239,44 @@ export const mapApiProductToProduct = (apiProduct: ApiProductData): Product => {
 // Map API product data to internal ProductSummary type (for listings)
 export const mapApiProductToProductSummary = (apiProduct: ApiProductData): ProductSummary => {
   const unitPrice = parseFloat(apiProduct.unitPrice);
+  const apiOldPrice = parseFloat((apiProduct as unknown as { oldPrice?: string | number }).oldPrice as string ?? '0');
   const discountValue = parseFloat(apiProduct.discountValue);
   const discountPrice = parseFloat(apiProduct.discountPrice);
-  const apiTotalPrice = typeof apiProduct.totalPrice === 'number' ? apiProduct.totalPrice : undefined;
-  
-  // When discountValue is 0, there's no discount - use unitPrice as current price
-  const hasDiscount = discountValue > 0 && discountPrice < unitPrice;
+  // totalPrice may come back as a string or number depending on the endpoint;
+  // treat NaN (from bad values) the same as absent — fall through to the price-field fallback.
+  const rawTotalPrice = (apiProduct as unknown as { totalPrice?: number | string }).totalPrice;
+  const parsedTotalPrice =
+    typeof rawTotalPrice === 'number'
+      ? rawTotalPrice
+      : typeof rawTotalPrice === 'string'
+        ? parseFloat(rawTotalPrice)
+        : undefined;
+  const apiTotalPrice = (parsedTotalPrice !== undefined && !isNaN(parsedTotalPrice))
+    ? parsedTotalPrice
+    : undefined;
 
-  // Use server-provided totalPrice as the displayed price; fall back to discountPrice or unitPrice
-  const effectiveCurrentPrice = apiTotalPrice ?? (hasDiscount ? discountPrice : unitPrice);
+  // A genuine price reduction exists whenever discountPrice is strictly less than unitPrice.
+  // We intentionally do NOT require discountValue > 0 here because some endpoints (e.g. the
+  // category endpoint) return discountValue="0" even for products that carry a real discount,
+  // while still sending a lower discountPrice.
+  const hasPriceReduction = discountPrice > 0 && discountPrice < unitPrice;
+  const hasDiscount = hasPriceReduction;
+
+  // When the API provides an explicit oldPrice, use it as the "original" (strikethrough) price.
+  // Fall back to unitPrice for backwards compatibility when oldPrice is missing.
+  const originalForDisplay = apiOldPrice > 0 && !isNaN(apiOldPrice) ? apiOldPrice : unitPrice;
+
+  // Priority: server-provided totalPrice (most authoritative) → discountPrice when lower → unitPrice
+  const effectiveCurrentPrice = apiTotalPrice ?? (hasPriceReduction ? discountPrice : unitPrice);
   
   // Create price object
   const price: PriceWithDiscount = {
     current: effectiveCurrentPrice,
-    original: hasDiscount ? unitPrice : undefined,
+    original: hasDiscount ? originalForDisplay : undefined,
     currency: 'NGN',
     discount: hasDiscount ? {
+      // Prefer the API-provided discountValue (exact %) over recalculation; fall back to
+      // calculating from the price difference when discountValue is absent/zero.
       percentage: discountValue > 0 ? discountValue : calculateDiscountPercentage(unitPrice, discountPrice),
       amount: unitPrice - discountPrice,
       validUntil: undefined,

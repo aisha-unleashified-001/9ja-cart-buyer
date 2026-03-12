@@ -486,23 +486,80 @@ export const useRealProductsByCategory = (
       setLoading(true);
     }
 
-    fetchAllProductSummaries((page) =>
-      productsApi.getProductsByCategory(categoryId, {
-        page,
-        perPage: BUYER_FETCH_PER_PAGE,
-        ...(search ? { search } : {}),
-        // Buyer-side rule: only show active products (API may ignore; we also filter client-side)
-        isActive: "1",
-      })
-    )
-      .then((allActive) => {
+    // The category endpoint (/product/category/:id/items) does not return `totalPrice`,
+    // so product cards would show unitPrice instead of the discounted price.
+    // Fix: run both fetches in parallel:
+    //   1. category endpoint  → correct product set for this category (filtering)
+    //   2. general endpoint   → correct totalPrice-based prices
+    // Then merge: keep the category product set, replace each price with the
+    // correct price from the general endpoint.
+    // The general results are session-cached so on warm navigations no extra API call is made.
+    const buyerActiveCacheKey = "buyer-active-" + (search || "");
+
+    const getGeneralProducts = (): Promise<ProductSummary[]> => {
+      const cached = productsListCache.get(buyerActiveCacheKey);
+      if (cached && Array.isArray(cached.products) && cached.products.length > 0) {
+        return Promise.resolve(cached.products as ProductSummary[]);
+      }
+      return fetchAllProductSummaries((page) =>
+        productsApi.getProducts({
+          page,
+          perPage: BUYER_FETCH_PER_PAGE,
+          ...(search ? { search } : {}),
+          isActive: "1",
+        })
+      )
+        .then((all) => {
+          productsListCache.set(buyerActiveCacheKey, {
+            products: all,
+            pagination: {
+              currentPage: 1,
+              perPage: BUYER_FETCH_PER_PAGE,
+              totalPages: 1,
+              totalItems: all.length,
+            },
+            ts: Date.now(),
+          });
+          saveProductsToSession(productsListCache);
+          return all;
+        })
+        .catch((): ProductSummary[] => []);
+    };
+
+    Promise.all([
+      fetchAllProductSummaries((page) =>
+        productsApi.getProductsByCategory(categoryId, {
+          page,
+          perPage: BUYER_FETCH_PER_PAGE,
+          ...(search ? { search } : {}),
+          // Buyer-side rule: only show active products (API may ignore; we also filter client-side)
+          isActive: "1",
+        })
+      ),
+      getGeneralProducts(),
+    ])
+      .then(([categoryProducts, generalProducts]) => {
         if (requestId !== requestIdRef.current) return;
-        setAllProducts(allActive);
+
+        // Build a price lookup from the general endpoint products (which carry totalPrice).
+        const priceMap = new Map<string, ProductSummary["price"]>();
+        for (const p of generalProducts) {
+          if (p.id) priceMap.set(p.id, p.price);
+        }
+
+        // Replace each category product's price with the correct totalPrice-based price.
+        // If a product is not found in the general set (rare), keep its original price.
+        const enriched = categoryProducts.map((product) => {
+          const correctPrice = priceMap.get(product.id);
+          return correctPrice ? { ...product, price: correctPrice } : product;
+        });
+
+        setAllProducts(enriched);
 
         // Update cache for this category + search combo
         if (categoryId) {
           categoryProductsCache.set(cacheKey, {
-            products: allActive,
+            products: enriched,
             ts: Date.now(),
           });
         }

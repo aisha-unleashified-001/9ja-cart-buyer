@@ -18,6 +18,8 @@ export interface ApiProductData {
   productDescription: string;
   productTags: string[];
   unitPrice: string;
+  /** Previous/original price before any discount (used for strikethrough display) */
+  oldPrice?: string;
   totalPrice?: number;
   discountType: string;
   discountValue: string;

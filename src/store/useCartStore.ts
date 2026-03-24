@@ -720,16 +720,10 @@ export const useCartStore = create<CartStore>()(
   },
 
   getShipping: (isAuthenticated: boolean) => {
-    if (isAuthenticated) {
-      // Use shipping from server summary if available
-      const { serverSummary } = get();
-      if (serverSummary?.shipping !== undefined) {
-        return serverSummary.shipping;
-      }
-    }
-    // For guest users or when server summary is not available, calculate shipping
-    const subtotal = get().getSubtotal(isAuthenticated);
-    return subtotal > 50000 ? 0 : 2500; // Free shipping over ₦50,000 fallback
+    // Shipping pricing is not enabled yet in frontend.
+    // Keep this as 0 so UI consistently shows "Incoming".
+    void isAuthenticated;
+    return 0;
   },
 
   getTax: (isAuthenticated: boolean) => {

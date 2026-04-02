@@ -360,6 +360,7 @@ const CheckoutPage: React.FC = () => {
   };
 
   const isGuestCheckoutFlow = !isAuthenticated && checkoutAsGuest;
+  const CHECKOUT_VERIFY_REDIRECT_FLAG = "checkout_verify_email_after_payment";
 
   const persistGuestRegisterPrefill = () => {
     if (!isGuestCheckoutFlow || !guestWantsAccount) return;
@@ -374,6 +375,32 @@ const CheckoutPage: React.FC = () => {
       );
     } catch {
       /* ignore quota / private mode */
+    }
+  };
+
+  const prepareGuestAccountForPostPayment = async () => {
+    if (
+      !isGuestCheckoutFlow ||
+      !guestWantsAccount ||
+      !guestPassword.trim()
+    ) {
+      return;
+    }
+
+    try {
+      await register({
+        firstName: billingDetails.firstName.trim(),
+        lastName:
+          billingDetails.lastName.trim() || billingDetails.firstName.trim(),
+        email: billingDetails.emailAddress.trim(),
+        password: guestPassword,
+      });
+      sessionStorage.setItem(CHECKOUT_VERIFY_REDIRECT_FLAG, "1");
+    } catch (regErr) {
+      const regMsg = apiErrorUtils.getErrorMessage(regErr);
+      alert(
+        `Your order was created, but we could not prepare account verification: ${regMsg}. You can still sign up with this email from the login page.`
+      );
     }
   };
 
@@ -487,6 +514,7 @@ const CheckoutPage: React.FC = () => {
 
         if (response.paymentData?.authorizationUrl) {
           persistGuestRegisterPrefill();
+          await prepareGuestAccountForPostPayment();
           setIsRedirectingToPayment(true);
           await clearAllItems();
           window.location.href = response.paymentData.authorizationUrl;
@@ -495,6 +523,7 @@ const CheckoutPage: React.FC = () => {
 
         if (response.redirectUrl) {
           persistGuestRegisterPrefill();
+          await prepareGuestAccountForPostPayment();
           setIsRedirectingToPayment(true);
           await clearAllItems();
           window.location.href = response.redirectUrl;

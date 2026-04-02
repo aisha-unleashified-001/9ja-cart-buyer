@@ -2,17 +2,20 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button, Alert } from '../../components/UI';
 import { useAuthStore } from '../../store/useAuthStore';
+import { useNotificationContext } from '../../providers/NotificationProvider';
 import { Mail, ArrowLeft } from 'lucide-react';
 
 const VerifyEmailPage: React.FC = () => {
   const navigate = useNavigate();
   const { pendingVerification, verifyEmail, resendOtp, isLoading } = useAuthStore();
+  const { showNotification } = useNotificationContext();
   
   const [otp, setOtp] = useState(['', '', '', '', '']);
   const [error, setError] = useState('');
   const [resendCooldown, setResendCooldown] = useState(0);
   const [successMessage, setSuccessMessage] = useState('');
   const [verificationSuccess, setVerificationSuccess] = useState(false);
+  const [showCheckoutSetupBanner, setShowCheckoutSetupBanner] = useState(false);
   
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
@@ -30,6 +33,16 @@ const VerifyEmailPage: React.FC = () => {
       return () => clearTimeout(timer);
     }
   }, [resendCooldown]);
+
+  // Show explicit guidance when redirected here from guest checkout post-payment.
+  useEffect(() => {
+    const fromCheckout = sessionStorage.getItem('checkout_verify_email_after_payment');
+    if (!fromCheckout) return;
+
+    setShowCheckoutSetupBanner(true);
+    showNotification('Complete account setup: enter your email verification code.', 'info', 5000);
+    sessionStorage.removeItem('checkout_verify_email_after_payment');
+  }, [showNotification]);
 
   if (!pendingVerification) {
     return null;
@@ -130,6 +143,12 @@ const VerifyEmailPage: React.FC = () => {
       {verificationSuccess && (
         <Alert variant="default" className="mb-6 border-green-200 bg-green-50 text-green-800">
           Email verified successfully! You can now sign in to your account.
+        </Alert>
+      )}
+
+      {showCheckoutSetupBanner && !verificationSuccess && (
+        <Alert variant="default" className="mb-6 border-blue-200 bg-blue-50 text-blue-900">
+          Your order was successful. Complete your account setup by entering the verification code sent to your email.
         </Alert>
       )}
 

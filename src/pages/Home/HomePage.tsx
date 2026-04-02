@@ -7,10 +7,29 @@ import RecentlyViewedProductsSection from "@/components/HomePage/RecentlyViewedP
 import { useAuthStore } from "@/store/useAuthStore";
 import React from "react";
 import { Helmet } from "react-helmet-async";
+import { useNavigate } from "react-router-dom";
 // Archived: FeaturedProducts (replaced by FastSelling displayed as "Featured Picks")
 
 const HomePage: React.FC = () => {
-  const { isAuthenticated } = useAuthStore();
+  const navigate = useNavigate();
+  const { isAuthenticated, pendingVerification } = useAuthStore();
+
+  React.useEffect(() => {
+    const verifyAfterPaymentFlag = sessionStorage.getItem(
+      "checkout_verify_email_after_payment"
+    );
+
+    if (!verifyAfterPaymentFlag) return;
+
+    if (pendingVerification && !isAuthenticated) {
+      sessionStorage.removeItem("checkout_verify_email_after_payment");
+      navigate("/auth/verify-email");
+      return;
+    }
+
+    // Clear stale flag so normal homepage behavior is preserved.
+    sessionStorage.removeItem("checkout_verify_email_after_payment");
+  }, [isAuthenticated, navigate, pendingVerification]);
 
   return (
     <div className="bg-white min-h-screen max-w-[960px] lg:max-w-7xl 2xl:max-w-[1550px] mx-auto">

@@ -12,12 +12,14 @@ interface CartItemProps {
   item: CartItemType;
   onRemove?: (productId: string) => void;
   isRemoving?: boolean;
+  isDeliveryFlagged?: boolean;
 }
 
 const CartItem: React.FC<CartItemProps> = ({
   item,
   onRemove,
   isRemoving = false,
+  isDeliveryFlagged = false,
 }) => {
   const { updateCartItemQuantity, isOperating } = useCart();
   const { addItem: addToWishlist, removeItem: removeFromWishlist, isItemInWishlist } = useWishlistStore();
@@ -104,7 +106,8 @@ const CartItem: React.FC<CartItemProps> = ({
     <div
       className={cn(
         "flex flex-col sm:flex-row gap-4 p-4 sm:p-6 transition-all duration-300",
-        isRemoving && "opacity-50 scale-95"
+        isRemoving && "opacity-50 scale-95",
+        isDeliveryFlagged && "bg-green-50/60 ring-1 ring-green-200 rounded-lg"
       )}
     >
       {/* Product Image */}
@@ -134,6 +137,14 @@ const CartItem: React.FC<CartItemProps> = ({
               {product.isSubaccountSet === false && (
                 <Badge variant="destructive" className="text-xs flex-shrink-0 bg-red-50 text-red-600 border-red-200 hover:text-white">
                   Product not available
+                </Badge>
+              )}
+              {isDeliveryFlagged && (
+                <Badge
+                  variant="outline"
+                  className="text-xs flex-shrink-0 border-green-300 text-green-800 bg-green-100"
+                >
+                  Manual delivery item
                 </Badge>
               )}
             </div>

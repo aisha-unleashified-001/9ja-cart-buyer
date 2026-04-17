@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { 
   Trash2, 
@@ -15,6 +15,9 @@ import {
 } from '../../components/UI';
 import { CartItem, CartSummary } from '../../components/Cart';
 import { useCart } from '../../hooks/useCart';
+import { useProfile } from '../../hooks/api/useProfile';
+import { useDeliveryValidation } from '../../hooks/useDeliveryValidation';
+import { inferMixedDeliveryCase } from '../../api/order';
 
 const CartPage: React.FC = () => {
   const navigate = useNavigate();
@@ -28,9 +31,50 @@ const CartPage: React.FC = () => {
     error,
     isAuthenticated
   } = useCart();
+  const { getDefaultAddress } = useProfile();
 
   const [showClearModal, setShowClearModal] = useState(false);
   const [removingItemId, setRemovingItemId] = useState<string | null>(null);
+
+  const defaultAddress = getDefaultAddress();
+  const buyerAddressForDelivery = useMemo(() => {
+    const city = defaultAddress?.city?.trim();
+    const state = defaultAddress?.state?.trim();
+    return [city, state].filter(Boolean).join(', ');
+  }, [defaultAddress]);
+
+  const {
+    validation: deliveryValidation,
+    isLoading: isDeliveryValidationLoading,
+    error: deliveryValidationError,
+  } = useDeliveryValidation({
+    buyerAddress: buyerAddressForDelivery,
+    cartLineItems: items,
+    enabled: items.length > 0 && Boolean(buyerAddressForDelivery),
+  });
+
+  const affectedSet = useMemo(
+    () => new Set(deliveryValidation?.affectedProductIds ?? []),
+    [deliveryValidation?.affectedProductIds]
+  );
+
+  const highlightedProductIds = useMemo(
+    () => items.filter((i) => affectedSet.has(i.product.id)).map((i) => i.product.id),
+    [items, affectedSet]
+  );
+
+  const inferredMixed = useMemo(
+    () =>
+      inferMixedDeliveryCase(
+        deliveryValidation?.affectedProductIds ?? [],
+        items.map((i) => i.product.id)
+      ),
+    [deliveryValidation?.affectedProductIds, items]
+  );
+
+  const showMixedBanner =
+    highlightedProductIds.length > 0 &&
+    (Boolean(deliveryValidation?.isMixedCart) || inferredMixed);
 
 
 
@@ -192,6 +236,38 @@ const CartPage: React.FC = () => {
           </Alert>
         )}
 
+        {isDeliveryValidationLoading && (
+          <Alert
+            variant="default"
+            title="Checking delivery eligibility"
+            className="mb-6 border-blue-200 bg-blue-50"
+          >
+            We are validating delivery locations for items in your cart.
+          </Alert>
+        )}
+
+        {deliveryValidationError && (
+          <Alert
+            variant="default"
+            title="Delivery validation unavailable"
+            className="mb-6 border-red-200 bg-red-50"
+          >
+            {deliveryValidationError}
+          </Alert>
+        )}
+
+        {showMixedBanner && (
+          <Alert
+            variant="default"
+            title="Mixed cart detected"
+            className="mb-6 border-green-200 bg-green-50"
+          >
+            Some products are from non-Lagos vendors and require manual delivery.
+            These products are highlighted below. You can proceed to checkout and
+            remove non-Lagos items there.
+          </Alert>
+        )}
+
         {/* Guest Cart Notice */}
         {!isAuthenticated && items.length > 0 && (
           <Alert 
@@ -213,6 +289,7 @@ const CartPage: React.FC = () => {
                     item={item}
                     onRemove={handleRemoveItem}
                     isRemoving={removingItemId === item.product.id}
+                    isDeliveryFlagged={affectedSet.has(item.product.id)}
                   />
                 </CardContent>
               </Card>

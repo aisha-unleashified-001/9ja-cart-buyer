@@ -104,8 +104,16 @@ class ApiClient {
       //   headers: Object.fromEntries(response.headers.entries())
       // });
       
-      // Parse response
-      const data = await response.json();
+      // Parse response defensively: some backend errors return empty/non-JSON bodies.
+      const rawText = await response.text();
+      let data: any = {};
+      if (rawText) {
+        try {
+          data = JSON.parse(rawText);
+        } catch {
+          data = { message: rawText };
+        }
+      }
       
       if (!response.ok) {
         console.error('API Error Response:', data);
@@ -120,9 +128,10 @@ class ApiClient {
         // Handle API error responses
         throw new ApiError(
           response.status, 
-          data.messages?.error ||
+          (data && typeof data === 'object' ? data.messages?.error : undefined) ||
             (typeof firstFieldMessage === 'string' ? firstFieldMessage : undefined) ||
-            data.message ||
+            (data && typeof data === 'object' ? data.message : undefined) ||
+            response.statusText ||
             `HTTP error! status: ${response.status}`,
           data
         );

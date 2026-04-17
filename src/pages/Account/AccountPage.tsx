@@ -8,10 +8,15 @@ import AddressesSection from '../../components/Account/AddressesSection';
 import OrdersSection from '../../components/Account/OrdersSection';
 import ContactAdminPage from './ContactAdminPage';
 import Container from '@/components/Layout/Container';
+import { Eye, EyeOff, Wallet } from 'lucide-react';
 
 const AccountPage: React.FC = () => {
   const { user } = useAuthStore();
   const [activeSection, setActiveSection] = useState('profile');
+  const [showWalletBalance, setShowWalletBalance] = useState(false);
+
+  const walletBalance = 125000;
+  const formattedWalletBalance = `₦${walletBalance.toLocaleString()}`;
 
   const renderPlaceholderSection = (title: string, description: string) => (
     <div className="space-y-6">
@@ -61,10 +66,32 @@ const AccountPage: React.FC = () => {
 
         {/* Welcome Header */}
         <div className="mb-8">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <h1 className="text-2xl font-semibold text-foreground">
               Welcome! {user?.firstName || 'Dorime'}
             </h1>
+
+            <div className="flex items-center gap-3 rounded-lg border border-border bg-card px-4 py-3 shadow-sm">
+              <span className="rounded-full bg-primary/10 p-2 text-primary">
+                <Wallet className="h-4 w-4" />
+              </span>
+
+              <div className="space-y-1">
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Wallet</p>
+                <p className="text-base font-semibold text-foreground">
+                  {showWalletBalance ? formattedWalletBalance : '₦******'}
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowWalletBalance((prev) => !prev)}
+                className="ml-2 inline-flex items-center justify-center rounded-md p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                aria-label={showWalletBalance ? 'Hide wallet balance' : 'Show wallet balance'}
+              >
+                {showWalletBalance ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
           </div>
         </div>
 

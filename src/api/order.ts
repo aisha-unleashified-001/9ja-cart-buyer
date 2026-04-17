@@ -18,6 +18,10 @@ export interface OrderItem {
   vendor: string;
   quantity: number;
   price: number;
+  variations?: Array<{
+    name: string;
+    value: string;
+  }>;
 }
 
 export interface CheckoutRequest {
@@ -26,6 +30,8 @@ export interface CheckoutRequest {
   paymentMethod: string;
   couponCode?: string;
   guestCheckout?: number;
+  createAccount?: number;
+  password?: string;
   buyerId?: string;
 }
 
@@ -56,6 +62,369 @@ export interface CheckoutResponse {
   error: boolean;
   message: string;
   data?: OrderData;
+}
+
+/** POST /order/checkout/validate-delivery */
+export interface ValidateDeliveryCartItem {
+  productId: string;
+}
+
+export interface ValidateDeliveryRequest {
+  buyerAddress: string;
+  cartItems: ValidateDeliveryCartItem[];
+}
+
+export interface DeliveryOptionDto {
+  id?: string;
+  name?: string;
+  provider?: string;
+  price?: number;
+  eta?: string;
+  estimatedArrival?: string;
+  estimatedDelivery?: string;
+}
+
+/** Normalized view of validate-delivery (backend field names may vary). */
+export interface NormalizedDeliveryValidation {
+  isMixedCart: boolean;
+  manualDeliveryRequired: boolean;
+  fullManualDelivery: boolean;
+  partialManualDelivery: boolean;
+  automatedDeliveryEligible: boolean;
+  /** Product IDs that must be removed from checkout for Lagos-only automated flow (non-Lagos vendor items). */
+  affectedProductIds: string[];
+  deliveryOptions: DeliveryOptionDto[];
+  /** Best-effort Waka Line display when options list Lagos automated delivery. */
+  wakaLine?: { price?: number; eta?: string; label?: string };
+  raw: unknown;
+}
+
+function asRecord(v: unknown): Record<string, unknown> | null {
+  return v !== null && typeof v === "object" && !Array.isArray(v)
+    ? (v as Record<string, unknown>)
+    : null;
+}
+
+/** Laravel / JSON often sends 0/1 or "true" instead of booleans. */
+function coerceBool(v: unknown): boolean | undefined {
+  if (typeof v === "boolean") return v;
+  if (typeof v === "number" && Number.isFinite(v)) return v !== 0;
+  if (typeof v === "string") {
+    const s = v.trim().toLowerCase();
+    if (s === "true" || s === "1" || s === "yes") return true;
+    if (s === "false" || s === "0" || s === "no") return false;
+  }
+  return undefined;
+}
+
+function pickBool(o: Record<string, unknown>, keys: string[]): boolean | undefined {
+  for (const k of keys) {
+    if (!(k in o)) continue;
+    const c = coerceBool(o[k]);
+    if (c !== undefined) return c;
+  }
+  return undefined;
+}
+
+function productIdFromUnknown(el: unknown): string | undefined {
+  if (typeof el === "string") return el;
+  if (typeof el === "number" && Number.isFinite(el)) return String(el);
+  if (!el || typeof el !== "object") return undefined;
+  const obj = el as Record<string, unknown>;
+  const nested = obj.product;
+  const fromNested =
+    nested && typeof nested === "object"
+      ? (nested as Record<string, unknown>).id
+      : undefined;
+  const raw =
+    obj.productId ??
+    obj.product_id ??
+    obj.id ??
+    fromNested;
+  if (typeof raw === "string") return raw;
+  if (typeof raw === "number" && Number.isFinite(raw)) return String(raw);
+  return undefined;
+}
+
+/** Merge root JSON with common wrappers (`data`, `validation`, etc.) so flags parse reliably. */
+function flattenApiEnvelope(payload: unknown): Record<string, unknown> {
+  const root = asRecord(payload) ?? {};
+  const merged: Record<string, unknown> = { ...root };
+
+  const unwrap = (raw: unknown): Record<string, unknown> | null => {
+    if (Array.isArray(raw) && raw[0] && typeof raw[0] === "object") {
+      return asRecord(raw[0]);
+    }
+    return asRecord(raw);
+  };
+
+  const candidates: unknown[] = [
+    root.data,
+    root.result,
+    root.Data,
+    root.Result,
+    root.validation,
+    root.delivery,
+    root.payload,
+    root.body,
+  ];
+
+  for (const c of candidates) {
+    const inner = unwrap(c);
+    if (inner && Object.keys(inner).length > 0) {
+      Object.assign(merged, inner);
+    }
+  }
+
+  return merged;
+}
+
+function pickStringArray(o: Record<string, unknown>, keys: string[]): string[] {
+  for (const k of keys) {
+    const v = o[k];
+    if (!Array.isArray(v)) continue;
+    const out: string[] = [];
+    for (const el of v) {
+      const pid = productIdFromUnknown(el);
+      if (pid) out.push(pid);
+    }
+    if (out.length) return out;
+  }
+  return [];
+}
+
+/**
+ * Maps validate-delivery JSON to a stable shape. Safe on empty or unknown payloads.
+ */
+export function parseValidateDeliveryResponse(payload: unknown): NormalizedDeliveryValidation {
+  const o = flattenApiEnvelope(payload);
+
+  let isMixedCart =
+    pickBool(o, [
+      "isMixedCart",
+      "mixedCart",
+      "is_mixed_cart",
+      "mixed",
+      "isMixedDelivery",
+      "mixedDelivery",
+      "is_mixed_delivery",
+      "hasMixedVendors",
+      "cartHasMixedVendors",
+      "mixedVendorCart",
+    ]) ?? false;
+
+  const modeStr = o.deliveryMode ?? o.delivery_mode ?? o.deliveryType ?? o.delivery_type;
+  if (typeof modeStr === "string" && /mixed/i.test(modeStr)) {
+    isMixedCart = true;
+  }
+
+  const manualDeliveryRequired =
+    pickBool(o, [
+      "manualDeliveryRequired",
+      "requiresManualDelivery",
+      "manual_delivery_required",
+      "isManualDelivery",
+      "manualDelivery",
+      "is_manual_delivery",
+      "requiresManualHandling",
+    ]) ?? false;
+
+  const automatedDeliveryEligible =
+    pickBool(o, [
+      "automatedDeliveryEligible",
+      "isAutomatedDelivery",
+      "automated_delivery",
+      "eligibleForAutomatedDelivery",
+      "hasAutomatedDelivery",
+      "automatedDeliveryAvailable",
+    ]) ?? false;
+
+  const affectedFromKeys = pickStringArray(o, [
+    "affectedProductIds",
+    "affected_product_ids",
+    "nonLagosProductIds",
+    "non_lagos_product_ids",
+    "manualDeliveryProductIds",
+    "itemsRequiringManualDelivery",
+    "items_requiring_manual_delivery",
+    "affectedItems",
+    "affected_items",
+    "itemsOutsideLagos",
+    "items_outside_lagos",
+    "outsideLagosItems",
+    "manualItems",
+    "nonLagosItems",
+  ]);
+
+  const affectedFromItems: string[] = [];
+  const scanRowsForManual = (rows: unknown[]) => {
+    for (const row of rows) {
+      const r = asRecord(row);
+      if (!r) continue;
+      const manual =
+        pickBool(r, [
+          "requiresManualDelivery",
+          "manualDelivery",
+          "manual",
+          "isManual",
+          "outsideLagos",
+          "isOutsideLagos",
+        ]) ?? false;
+      const pid = productIdFromUnknown(r);
+      if (manual && pid) affectedFromItems.push(pid);
+    }
+  };
+
+  if (!affectedFromKeys.length && Array.isArray(o.items)) {
+    scanRowsForManual(o.items);
+  }
+  if (!affectedFromKeys.length && !affectedFromItems.length && Array.isArray(o.cartItems)) {
+    scanRowsForManual(o.cartItems);
+  }
+
+  /** Some APIs nest line items under vendors. */
+  if (
+    !affectedFromKeys.length &&
+    !affectedFromItems.length &&
+    Array.isArray(o.vendors)
+  ) {
+    for (const v of o.vendors) {
+      const vr = asRecord(v);
+      if (!vr) continue;
+      const isLagos = pickBool(vr, ["isLagos", "is_lagos", "lagosVendor"]);
+      const region = vr.region ?? vr.state ?? vr.vendorState;
+      const nonLagos =
+        isLagos === false ||
+        (typeof region === "string" && !/lagos/i.test(region));
+      if (!nonLagos) continue;
+      const vItems = vr.items ?? vr.cartItems;
+      if (!Array.isArray(vItems)) continue;
+      for (const row of vItems) {
+        const pid = productIdFromUnknown(row);
+        if (pid) affectedFromItems.push(pid);
+      }
+    }
+  }
+
+  const affectedProductIds = [...new Set([...affectedFromKeys, ...affectedFromItems])];
+
+  let deliveryOptions: DeliveryOptionDto[] = [];
+  const rawOpts =
+    o.deliveryOptions ??
+    o.options ??
+    o.automatedDeliveryOptions ??
+    o.automated_options ??
+    o.automatedOptions;
+  if (Array.isArray(rawOpts)) {
+    deliveryOptions = rawOpts.map((x) => {
+      const r = asRecord(x) ?? {};
+      const rawPrice = r.price ?? r.amount ?? r.cost;
+      let price: number | undefined;
+      if (typeof rawPrice === "number" && Number.isFinite(rawPrice)) price = rawPrice;
+      else if (typeof rawPrice === "string") {
+        const n = parseFloat(rawPrice.replace(/[^0-9.-]/g, ""));
+        if (Number.isFinite(n)) price = n;
+      }
+      const eta =
+        (typeof r.eta === "string" && r.eta) ||
+        (typeof r.estimatedArrival === "string" && r.estimatedArrival) ||
+        (typeof r.estimatedDelivery === "string" && r.estimatedDelivery) ||
+        undefined;
+      return {
+        id: typeof r.id === "string" ? r.id : undefined,
+        name: typeof r.name === "string" ? r.name : undefined,
+        provider: typeof r.provider === "string" ? r.provider : undefined,
+        price,
+        eta,
+        estimatedArrival:
+          typeof r.estimatedArrival === "string" ? r.estimatedArrival : undefined,
+        estimatedDelivery:
+          typeof r.estimatedDelivery === "string" ? r.estimatedDelivery : undefined,
+      };
+    });
+  }
+
+  const wakaFromRoot = asRecord(o.wakaLine ?? o.waka_line);
+  let wakaLine: NormalizedDeliveryValidation["wakaLine"];
+  if (wakaFromRoot) {
+    const wp = wakaFromRoot.price ?? wakaFromRoot.amount;
+    let price: number | undefined;
+    if (typeof wp === "number" && Number.isFinite(wp)) price = wp;
+    else if (typeof wp === "string") {
+      const n = parseFloat(wp.replace(/[^0-9.-]/g, ""));
+      if (Number.isFinite(n)) price = n;
+    }
+    const eta =
+      (typeof wakaFromRoot.eta === "string" && wakaFromRoot.eta) ||
+      (typeof wakaFromRoot.estimatedArrival === "string" &&
+        wakaFromRoot.estimatedArrival) ||
+      undefined;
+    wakaLine = {
+      price,
+      eta,
+      label: typeof wakaFromRoot.label === "string" ? wakaFromRoot.label : "Waka Line",
+    };
+  } else {
+    const wakaOpt = deliveryOptions.find(
+      (d) =>
+        (d.name && /waka/i.test(d.name)) ||
+        (d.provider && /waka/i.test(d.provider))
+    );
+    if (wakaOpt) {
+      wakaLine = {
+        price: wakaOpt.price,
+        eta: wakaOpt.eta ?? wakaOpt.estimatedArrival ?? wakaOpt.estimatedDelivery,
+        label: wakaOpt.name ?? "Waka Line",
+      };
+    }
+  }
+
+  const partialManualDelivery = isMixedCart || (affectedProductIds.length > 0 && manualDeliveryRequired);
+  const fullManualDelivery =
+    manualDeliveryRequired && !isMixedCart && affectedProductIds.length === 0;
+
+  return {
+    isMixedCart,
+    manualDeliveryRequired,
+    fullManualDelivery,
+    partialManualDelivery,
+    automatedDeliveryEligible,
+    affectedProductIds,
+    deliveryOptions,
+    wakaLine,
+    raw: payload,
+  };
+}
+
+/**
+ * Mixed cart: some checkout products are flagged for manual/non-Lagos handling, but not all.
+ * Used when the API omits `isMixedCart` but returns `affectedProductIds`.
+ */
+export function inferMixedDeliveryCase(
+  affectedProductIds: string[],
+  checkoutProductIds: string[]
+): boolean {
+  if (affectedProductIds.length === 0) return false;
+  const uniqueCart = new Set(checkoutProductIds);
+  const affectedInCart = affectedProductIds.filter((id) => uniqueCart.has(id));
+  if (affectedInCart.length === 0) return false;
+  return affectedInCart.length < uniqueCart.size;
+}
+
+/** One entry per unit, matching API examples that repeat productId by quantity. */
+export function expandCartItemsForValidateDelivery(
+  cartItems: Array<{ product: { id: string }; quantity: number }>
+): ValidateDeliveryCartItem[] {
+  const out: ValidateDeliveryCartItem[] = [];
+  for (const line of cartItems) {
+    const id = line.product?.id;
+    if (!id) continue;
+    const q = Math.max(0, Math.floor(Number(line.quantity) || 0));
+    for (let i = 0; i < q; i++) {
+      out.push({ productId: id });
+    }
+  }
+  return out;
 }
 
 // Order Detail API response types
@@ -203,6 +572,20 @@ export const orderApi = {
     return apiClient.post<CheckoutResponse>(
       "/order/checkout",
       guestPayload,
+      undefined,
+      false
+    );
+  },
+
+  /**
+   * Pre-checkout delivery validation (Basic auth). Evaluates Lagos vs mixed cart and delivery options.
+   */
+  validateDelivery: async (
+    body: ValidateDeliveryRequest
+  ): Promise<unknown> => {
+    return apiClient.post<unknown>(
+      "/order/checkout/validate-delivery",
+      body,
       undefined,
       false
     );
@@ -392,16 +775,44 @@ export const transformBillingDetails = (billingForm: any): BillingDetails => ({
 export const transformCartItemsToOrderItems = (
   cartItems: any[]
 ): OrderItem[] => {
-  return cartItems.map((item) => ({
-    productId: item.product.id,
-    vendor: item.vendor || "", // Use server vendor or empty string
-    quantity: item.quantity,
-    price:
-      item.price ||
+  return cartItems.map((item) => {
+    const rawPrice =
+      item.price ??
       (typeof item.product.price === "number"
         ? item.product.price
-        : item.product.price.current),
-  }));
+        : item.product.price.current);
+
+    const numericPrice =
+      typeof rawPrice === "string" ? parseFloat(rawPrice) : Number(rawPrice);
+
+    const variations =
+      item.selectedVariants && Object.keys(item.selectedVariants).length > 0
+        ? Object.entries(item.selectedVariants).map(([key, value]) => {
+            const lower = key.toLowerCase();
+            const name =
+              lower === "size"
+                ? "Size"
+                : lower === "color"
+                  ? "Color"
+                  : lower === "measurement"
+                    ? "Measurement"
+                    : key.charAt(0).toUpperCase() + key.slice(1);
+            return { name, value: String(value) };
+          })
+        : undefined;
+
+    return {
+      productId: item.product.id,
+      // Prefer server vendor; fallback to product seller to avoid empty vendor payloads.
+      vendor: item.vendor || item.product?.sellerId || "",
+      quantity: Number.isFinite(Number(item.quantity))
+        ? Math.max(1, Math.trunc(Number(item.quantity)))
+        : 1,
+      // Payment provider/backend expects whole-number amount values.
+      price: Number.isFinite(numericPrice) ? Math.round(numericPrice) : 0,
+      ...(variations ? { variations } : {}),
+    };
+  });
 };
 
 export const mapPaymentMethodToApi = (uiPaymentMethod: string): string => {

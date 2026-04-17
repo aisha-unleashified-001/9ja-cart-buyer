@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import visaLogo from "@/assets/payment-logos/visa-logo.png";
 import mastercardLogo from "@/assets/payment-logos/mastercard-logo.png";
@@ -25,6 +25,7 @@ import {
   AddressSelector,
 } from "../../components/Checkout";
 import { useCart } from "../../hooks/useCart";
+import { useDeliveryValidation } from "../../hooks/useDeliveryValidation";
 import { useAuthStore } from "../../store/useAuthStore";
 import { useProfile } from "../../hooks/api/useProfile";
 import {
@@ -39,6 +40,9 @@ import {
   transformBillingDetails,
   transformCartItemsToOrderItems,
   mapPaymentMethodToApi,
+  parseValidateDeliveryResponse,
+  expandCartItemsForValidateDelivery,
+  inferMixedDeliveryCase,
 } from "../../api/order";
 import { apiErrorUtils } from "../../utils/api-errors";
 import { cn } from "../../lib/utils";
@@ -52,21 +56,105 @@ interface PaymentMethod {
   disabled?: boolean;
 }
 
+interface BnplAddress {
+  street: string;
+  town: string;
+  state: string;
+}
+
+interface BnplWorkInformation {
+  company: string;
+  job_role: string;
+  monthly_salary: number;
+  start_date: string;
+  office_address: BnplAddress;
+}
+
+interface BnplProfileForm {
+  first_name: string;
+  last_name: string;
+  phone: string;
+  email: string;
+  partner_ref: string;
+  bvn: string;
+  nin: string;
+  date_of_birth: string;
+  gender: number;
+  state_of_origin: string;
+  home_address: BnplAddress;
+  work_information: BnplWorkInformation;
+}
+
+type BnplStatus = "approved" | "pending" | "rejected";
+type BnplStep = "info" | "form" | "otp" | "processing" | "decision";
+type BnplFormStep = "identity" | "details";
+
 const CHECKOUT_GUEST_PARAM = "guest";
+
+function buildBuyerAddressLine(
+  billing: BillingDetailsForm,
+  selectedAddress: UserAddress | null
+): string {
+  const parts = [
+    billing.streetAddress?.trim(),
+    billing.apartment?.trim(),
+    billing.townCity?.trim(),
+    selectedAddress?.state?.trim(),
+  ].filter(Boolean);
+  return parts.join(", ");
+}
 
 const CheckoutPage: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const { items, availableItems, subtotal, shipping: cartShipping, flatRate, finalTotal, clearAllItems, isLoading } = useCart();
+  const { items, availableItems, shipping: cartShipping, flatRate, clearAllItems, isLoading } = useCart();
 
-  const { isAuthenticated, user, register } = useAuthStore();
+  const { isAuthenticated, user } = useAuthStore();
   const { profile, fetchProfile, getDefaultAddress, getAddresses, addAddress } =
     useProfile();
 
   const [isProcessing, setIsProcessing] = useState(false);
   const [isRedirectingToPayment, setIsRedirectingToPayment] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState("bank-card");
+  const [showBnplModal, setShowBnplModal] = useState(false);
+  const [bnplStep, setBnplStep] = useState<BnplStep>("info");
+  const [bnplFormStep, setBnplFormStep] = useState<BnplFormStep>("identity");
+  const [bnplStatus, setBnplStatus] = useState<BnplStatus | null>(null);
+  const [bnplValidationError, setBnplValidationError] = useState<string | null>(
+    null
+  );
+  const [bnplOtp, setBnplOtp] = useState("");
+  const [bnplOtpError, setBnplOtpError] = useState<string | null>(null);
+  const [bnplOtpTarget] = useState("123456"); // Frontend demo OTP; no API interaction.
+  const [bnplProfile, setBnplProfile] = useState<BnplProfileForm>({
+    first_name: "Adebayo",
+    last_name: "Ogunlesi",
+    phone: "+2348012345678",
+    email: "adebayo@example.com",
+    partner_ref: "REF-001",
+    bvn: "22345678901",
+    nin: "12345678901",
+    date_of_birth: "1990-05-15",
+    gender: 1,
+    state_of_origin: "Lagos",
+    home_address: {
+      street: "45 Ozumba Mbadiwe Rd",
+      town: "Lekki",
+      state: "Lagos",
+    },
+    work_information: {
+      company: "Unilever Nigeria Ltd.",
+      job_role: "Head of Finance",
+      monthly_salary: 540000000,
+      start_date: "31-09-1977",
+      office_address: {
+        street: "45 Ozumba Mbadiwe Rd",
+        town: "Lekki",
+        state: "Lagos",
+      },
+    },
+  });
   const [showSuccess, setShowSuccess] = useState(false);
   const [orderNumber, setOrderNumber] = useState("");
   const [validationErrors, setValidationErrors] = useState<ValidationError[]>(
@@ -97,6 +185,12 @@ const CheckoutPage: React.FC = () => {
   const [appliedCoupon, setAppliedCoupon] = useState<string | null>(null);
   const [couponDiscount, setCouponDiscount] = useState(0);
   const [couponError, setCouponError] = useState<string | null>(null);
+
+  /** Product IDs excluded from this checkout only (remain in cart). */
+  const [checkoutExcludedProductIds, setCheckoutExcludedProductIds] = useState<
+    string[]
+  >([]);
+  const [isValidatingDelivery, setIsValidatingDelivery] = useState(false);
 
   const [billingDetails, setBillingDetails] = useState<BillingDetailsForm>({
     firstName: "",
@@ -177,7 +271,7 @@ const CheckoutPage: React.FC = () => {
       id: "buy-now-pay-later",
       name: "Buy Now, Pay Later",
       icon: <Shield className="w-5 h-5" />,
-      disabled: true,
+      disabled: false,
     },
     // Hidden for now - Emergency Credit
     // {
@@ -189,10 +283,89 @@ const CheckoutPage: React.FC = () => {
   ];
 
   // Use filtered values from cart (already exclude unavailable products)
-  const cartSubtotal = subtotal; // Use filtered subtotal from cart
-  const shipping = cartShipping; // Use shipping from cart (already calculated based on filtered items)
   const discount = couponDiscount;
-  const total = finalTotal - discount; // Use finalTotal from cart (already includes subtotal + shipping + commission)
+
+  const checkoutExcludedSet = useMemo(
+    () => new Set(checkoutExcludedProductIds),
+    [checkoutExcludedProductIds]
+  );
+
+  const itemsForCheckout = useMemo(
+    () =>
+      availableItems.filter((i) => !checkoutExcludedSet.has(i.product.id)),
+    [availableItems, checkoutExcludedSet]
+  );
+
+  const cartSubtotal = useMemo(() => {
+    return itemsForCheckout.reduce((acc, item) => {
+      const price =
+        typeof item.product.price === "number"
+          ? item.product.price
+          : item.product.price.current;
+      return acc + price * item.quantity;
+    }, 0);
+  }, [itemsForCheckout]);
+
+  const shipping = cartShipping;
+  const total = cartSubtotal + shipping + flatRate - discount;
+
+  const buyerAddressForDelivery = useMemo(
+    () => buildBuyerAddressLine(billingDetails, selectedAddress),
+    [billingDetails, selectedAddress]
+  );
+
+  const canRunDeliveryValidation =
+    itemsForCheckout.length > 0 &&
+    Boolean(
+      billingDetails.streetAddress?.trim() &&
+        billingDetails.townCity?.trim()
+    );
+
+  const {
+    validation: deliveryValidation,
+    error: deliveryValidationError,
+    isLoading: isDeliveryValidationLoading,
+    refresh: refreshDeliveryValidation,
+  } = useDeliveryValidation({
+    buyerAddress: buyerAddressForDelivery,
+    cartLineItems: itemsForCheckout,
+    enabled: canRunDeliveryValidation,
+  });
+
+  const highlightProductIdsForSummary = useMemo(() => {
+    if (!deliveryValidation?.affectedProductIds.length) return [];
+    const af = new Set(deliveryValidation.affectedProductIds);
+    return itemsForCheckout
+      .filter((i) => af.has(i.product.id))
+      .map((i) => i.product.id);
+  }, [deliveryValidation, itemsForCheckout]);
+
+  const inferredMixedDelivery = useMemo(
+    () =>
+      inferMixedDeliveryCase(
+        deliveryValidation?.affectedProductIds ?? [],
+        itemsForCheckout.map((i) => i.product.id)
+      ),
+    [deliveryValidation?.affectedProductIds, itemsForCheckout]
+  );
+
+  const showMixedCartBanner =
+    highlightProductIdsForSummary.length > 0 &&
+    (Boolean(deliveryValidation?.isMixedCart) || inferredMixedDelivery);
+
+  const showAutomatedDeliveryUi =
+    Boolean(deliveryValidation?.automatedDeliveryEligible) &&
+    !deliveryValidation?.isMixedCart &&
+    !deliveryValidation?.manualDeliveryRequired &&
+    !inferredMixedDelivery;
+
+  const hideManualDeliveryUi =
+    checkoutExcludedProductIds.length > 0 && !showMixedCartBanner;
+
+  const shouldShowDeliveryCard =
+    Boolean(deliveryValidationError) ||
+    (Boolean(deliveryValidation) &&
+      (showAutomatedDeliveryUi || !hideManualDeliveryUi));
 
   // Address management functions
   const handleEditAddress = () => {
@@ -360,7 +533,17 @@ const CheckoutPage: React.FC = () => {
   };
 
   const isGuestCheckoutFlow = !isAuthenticated && checkoutAsGuest;
-  const CHECKOUT_VERIFY_REDIRECT_FLAG = "checkout_verify_email_after_payment";
+
+  useEffect(() => {
+    if (selectedPayment !== "buy-now-pay-later") {
+      setShowBnplModal(false);
+      return;
+    }
+    setShowBnplModal(true);
+    setBnplStep("info");
+    setBnplStatus(null);
+    setBnplValidationError(null);
+  }, [selectedPayment]);
 
   const persistGuestRegisterPrefill = () => {
     if (!isGuestCheckoutFlow || !guestWantsAccount) return;
@@ -378,30 +561,157 @@ const CheckoutPage: React.FC = () => {
     }
   };
 
-  const prepareGuestAccountForPostPayment = async () => {
+  const handleBnplProfileChange = (
+    field: keyof Omit<
+      BnplProfileForm,
+      "home_address" | "work_information" | "gender"
+    >,
+    value: string
+  ) => {
+    setBnplProfile((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+    setBnplValidationError(null);
+  };
+
+  const handleBnplHomeAddressChange = (field: keyof BnplAddress, value: string) => {
+    setBnplProfile((prev) => ({
+      ...prev,
+      home_address: {
+        ...prev.home_address,
+        [field]: value,
+      },
+    }));
+    setBnplValidationError(null);
+  };
+
+  const handleBnplWorkInfoChange = (
+    field: keyof Omit<BnplWorkInformation, "office_address" | "monthly_salary">,
+    value: string
+  ) => {
+    setBnplProfile((prev) => ({
+      ...prev,
+      work_information: {
+        ...prev.work_information,
+        [field]: value,
+      },
+    }));
+    setBnplValidationError(null);
+  };
+
+  const handleBnplOfficeAddressChange = (
+    field: keyof BnplAddress,
+    value: string
+  ) => {
+    setBnplProfile((prev) => ({
+      ...prev,
+      work_information: {
+        ...prev.work_information,
+        office_address: {
+          ...prev.work_information.office_address,
+          [field]: value,
+        },
+      },
+    }));
+    setBnplValidationError(null);
+  };
+
+  const handleBnplApplicationSubmit = async () => {
+    const requiredFields = [
+      bnplProfile.first_name,
+      bnplProfile.last_name,
+      bnplProfile.phone,
+      bnplProfile.email,
+      bnplProfile.partner_ref,
+      bnplProfile.bvn,
+      bnplProfile.nin,
+      bnplProfile.date_of_birth,
+      bnplProfile.state_of_origin,
+      bnplProfile.home_address.street,
+      bnplProfile.home_address.town,
+      bnplProfile.home_address.state,
+      bnplProfile.work_information.company,
+      bnplProfile.work_information.job_role,
+      bnplProfile.work_information.start_date,
+      bnplProfile.work_information.office_address.street,
+      bnplProfile.work_information.office_address.town,
+      bnplProfile.work_information.office_address.state,
+    ];
+
+    const hasEmptyField = requiredFields.some((value) => !value.trim());
     if (
-      !isGuestCheckoutFlow ||
-      !guestWantsAccount ||
-      !guestPassword.trim()
+      hasEmptyField ||
+      bnplProfile.gender < 1 ||
+      bnplProfile.work_information.monthly_salary <= 0
     ) {
+      setBnplValidationError("Please complete all BNPL profile fields.");
       return;
     }
 
-    try {
-      await register({
-        firstName: billingDetails.firstName.trim(),
-        lastName:
-          billingDetails.lastName.trim() || billingDetails.firstName.trim(),
-        email: billingDetails.emailAddress.trim(),
-        password: guestPassword,
-      });
-      sessionStorage.setItem(CHECKOUT_VERIFY_REDIRECT_FLAG, "1");
-    } catch (regErr) {
-      const regMsg = apiErrorUtils.getErrorMessage(regErr);
-      alert(
-        `Your order was created, but we could not prepare account verification: ${regMsg}. You can still sign up with this email from the login page.`
-      );
+    if (!/^\d{11}$/.test(bnplProfile.bvn)) {
+      setBnplValidationError("BVN must be 11 digits.");
+      return;
     }
+
+    if (!/^\d{11}$/.test(bnplProfile.nin)) {
+      setBnplValidationError("NIN must be 11 digits.");
+      return;
+    }
+
+    if (!/\S+@\S+\.\S+/.test(bnplProfile.email)) {
+      setBnplValidationError("Please enter a valid email address.");
+      return;
+    }
+
+    setBnplValidationError(null);
+    setBnplOtp("");
+    setBnplOtpError(null);
+    setBnplStatus(null);
+    setBnplStep("otp");
+  };
+
+  const handleBnplOtpVerify = async () => {
+    const otp = bnplOtp.replace(/\D/g, "").slice(0, 6);
+    if (otp.length !== 6) {
+      setBnplOtpError("Enter the 6-digit OTP sent to your phone.");
+      return;
+    }
+
+    if (otp !== bnplOtpTarget) {
+      setBnplOtpError("Invalid OTP. Please try again.");
+      return;
+    }
+
+    setBnplOtpError(null);
+    setBnplStep("processing");
+
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+    setBnplStatus("pending");
+    setBnplStep("decision");
+  };
+
+  const handleCloseBnplModal = () => {
+    setShowBnplModal(false);
+    setSelectedPayment("bank-card");
+    setBnplStep("info");
+    setBnplFormStep("identity");
+    setBnplStatus(null);
+    setBnplValidationError(null);
+    setBnplOtp("");
+    setBnplOtpError(null);
+  };
+
+  const handleRemoveAllNonLagosFromCheckout = () => {
+    if (!deliveryValidation?.affectedProductIds.length) return;
+    const merged = [
+      ...new Set([
+        ...checkoutExcludedProductIds,
+        ...deliveryValidation.affectedProductIds,
+      ]),
+    ];
+    setCheckoutExcludedProductIds(merged);
+    window.setTimeout(() => refreshDeliveryValidation(), 0);
   };
 
   const handlePlaceOrder = async () => {
@@ -409,6 +719,13 @@ const CheckoutPage: React.FC = () => {
     if (availableItems.length === 0) {
       alert("Your cart is empty. Please add items to your cart before placing an order.");
       navigate("/products");
+      return;
+    }
+
+    if (itemsForCheckout.length === 0) {
+      alert(
+        "No items left in this checkout. Remove exclusions or add items to continue."
+      );
       return;
     }
 
@@ -469,12 +786,52 @@ const CheckoutPage: React.FC = () => {
       return;
     }
 
+    setIsValidatingDelivery(true);
+    try {
+      const buyerAddress = buildBuyerAddressLine(billingDetails, selectedAddress);
+      const cartPayload = expandCartItemsForValidateDelivery(itemsForCheckout);
+      if (!buyerAddress.trim() || cartPayload.length === 0) {
+        throw new Error(
+          "Complete your shipping address and ensure your cart has items to validate delivery."
+        );
+      }
+      const raw = await orderApi.validateDelivery({
+        buyerAddress,
+        cartItems: cartPayload,
+      });
+      const normalized = parseValidateDeliveryResponse(raw);
+
+      const checkoutPids = itemsForCheckout.map((i) => i.product.id);
+      const hasAffectedStillInCheckout = normalized.affectedProductIds.some((id) =>
+        itemsForCheckout.some((i) => i.product.id === id)
+      );
+      const inferredMixed = inferMixedDeliveryCase(
+        normalized.affectedProductIds,
+        checkoutPids
+      );
+      const stillMixedBlocked =
+        hasAffectedStillInCheckout &&
+        (Boolean(normalized.isMixedCart) || inferredMixed);
+
+      if (stillMixedBlocked) {
+        setIsValidatingDelivery(false);
+        void refreshDeliveryValidation();
+        return;
+      }
+    } catch (e) {
+      const msg = apiErrorUtils.getErrorMessage(e);
+      setIsValidatingDelivery(false);
+      alert(`Delivery validation failed: ${msg}\n\nPlease try again.`);
+      return;
+    }
+    setIsValidatingDelivery(false);
+
     setIsProcessing(true);
     setValidationErrors([]);
 
     try {
       const billingData = transformBillingDetails(billingDetails);
-      const orderItems = transformCartItemsToOrderItems(availableItems);
+      const orderItems = transformCartItemsToOrderItems(itemsForCheckout);
       const paymentMethod = mapPaymentMethodToApi(selectedPayment);
 
       if (!orderItems || orderItems.length === 0) {
@@ -499,6 +856,12 @@ const CheckoutPage: React.FC = () => {
         orderItems,
         paymentMethod,
         ...(isGuestCheckoutFlow && { guestCheckout: 1 }),
+        ...(isGuestCheckoutFlow &&
+          guestWantsAccount &&
+          guestPassword.trim() && {
+            createAccount: 1,
+            password: guestPassword,
+          }),
         ...(!isGuestCheckoutFlow && user?.id && { buyerId: user.id }),
         ...(appliedCoupon && { couponCode: appliedCoupon }),
       };
@@ -514,7 +877,6 @@ const CheckoutPage: React.FC = () => {
 
         if (response.paymentData?.authorizationUrl) {
           persistGuestRegisterPrefill();
-          await prepareGuestAccountForPostPayment();
           setIsRedirectingToPayment(true);
           await clearAllItems();
           window.location.href = response.paymentData.authorizationUrl;
@@ -523,7 +885,6 @@ const CheckoutPage: React.FC = () => {
 
         if (response.redirectUrl) {
           persistGuestRegisterPrefill();
-          await prepareGuestAccountForPostPayment();
           setIsRedirectingToPayment(true);
           await clearAllItems();
           window.location.href = response.redirectUrl;
@@ -531,29 +892,6 @@ const CheckoutPage: React.FC = () => {
         }
 
         await clearAllItems();
-
-        if (
-          isGuestCheckoutFlow &&
-          guestWantsAccount &&
-          guestPassword.trim()
-        ) {
-          try {
-            await register({
-              firstName: billingDetails.firstName.trim(),
-              lastName:
-                billingDetails.lastName.trim() || billingDetails.firstName.trim(),
-              email: billingDetails.emailAddress.trim(),
-              password: guestPassword,
-            });
-            navigate("/auth/registration-success");
-            return;
-          } catch (regErr) {
-            const regMsg = apiErrorUtils.getErrorMessage(regErr);
-            alert(
-              `Your order was placed. We could not create your account: ${regMsg}. You can still sign up with this email from the login page.`
-            );
-          }
-        }
 
         setShowSuccess(true);
         return;
@@ -1212,8 +1550,41 @@ const CheckoutPage: React.FC = () => {
 
           {/* Order Summary */}
           <div>
+            {showMixedCartBanner && (
+              <Alert className="mb-4 border-green-200 bg-green-50 text-green-950">
+                <div className="space-y-3">
+                  <div>
+                    <p className="font-medium">Mixed cart</p>
+                    <p className="text-sm text-green-900/90">
+                      Your cart has both Lagos and non-Lagos items. Non-Lagos items are
+                      highlighted below. Remove them from this checkout to continue, or
+                      change your cart on the cart page.
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="border-green-300 bg-white text-green-950 hover:bg-green-100"
+                    onClick={handleRemoveAllNonLagosFromCheckout}
+                    disabled={
+                      isValidatingDelivery || isDeliveryValidationLoading
+                    }
+                    >
+                      Remove All Non-Lagos Items
+                    </Button>
+                    <p className="text-xs text-green-900/80">
+                      Removes non-Lagos lines from this checkout only — they stay in your
+                      cart.
+                    </p>
+                  </div>
+                </div>
+              </Alert>
+            )}
+
             <OrderSummary
-              items={availableItems}
+              items={itemsForCheckout}
               subtotal={cartSubtotal}
               shipping={shipping}
               flatRate={flatRate}
@@ -1222,7 +1593,100 @@ const CheckoutPage: React.FC = () => {
               total={total}
               appliedCoupon={appliedCoupon}
               showTitle={false}
+              highlightProductIds={highlightProductIdsForSummary}
             />
+
+            {shouldShowDeliveryCard && (
+              <Card className="mt-6">
+                <CardContent className="p-6 space-y-3">
+                  <h3 className="text-lg font-medium text-gray-900">Delivery</h3>
+                  {deliveryValidationError && (
+                    <div className="flex items-start gap-2 text-sm text-red-600">
+                      <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+                      <span>{deliveryValidationError}</span>
+                    </div>
+                  )}
+                  {deliveryValidation && !deliveryValidationError && (() => {
+                    const showAutomatedUi = showAutomatedDeliveryUi;
+
+                    if (showAutomatedUi && deliveryValidation.wakaLine &&
+                      (deliveryValidation.wakaLine.price !== undefined ||
+                        deliveryValidation.wakaLine.eta)) {
+                      return (
+                        <div className="rounded-lg border border-green-200 bg-green-50/80 p-4 space-y-1">
+                          <p className="text-sm font-semibold text-gray-900">
+                            {deliveryValidation.wakaLine.label ?? "Waka Line"}
+                          </p>
+                          {deliveryValidation.wakaLine.price !== undefined && (
+                            <p className="text-sm text-gray-700">
+                              Price: {formatPrice(deliveryValidation.wakaLine.price)}
+                            </p>
+                          )}
+                          {deliveryValidation.wakaLine.eta && (
+                            <p className="text-sm text-gray-700">
+                              ETA: {deliveryValidation.wakaLine.eta}
+                            </p>
+                          )}
+                        </div>
+                      );
+                    }
+
+                    if (showAutomatedUi && deliveryValidation.deliveryOptions.length > 0) {
+                      return (
+                        <ul className="space-y-2">
+                          {deliveryValidation.deliveryOptions.map((opt, idx) => (
+                            <li
+                              key={opt.id ?? `${opt.name ?? "opt"}-${idx}`}
+                              className="rounded-lg border border-green-200 bg-green-50/80 p-3 text-sm"
+                            >
+                              <span className="font-medium text-gray-900">
+                                {opt.name ?? opt.provider ?? "Delivery"}
+                              </span>
+                              {opt.price !== undefined && (
+                                <span className="text-gray-700">
+                                  {" "}
+                                  · {formatPrice(opt.price)}
+                                </span>
+                              )}
+                              {(opt.eta ?? opt.estimatedArrival) && (
+                                <span className="block text-gray-600 mt-0.5">
+                                  ETA: {opt.eta ?? opt.estimatedArrival}
+                                </span>
+                              )}
+                            </li>
+                          ))}
+                        </ul>
+                      );
+                    }
+
+                    if (showAutomatedUi) {
+                      return (
+                        <div className="rounded-lg border border-green-200 bg-green-50/80 p-4">
+                          <p className="text-sm font-medium text-gray-900">
+                            Automated delivery available
+                          </p>
+                          <p className="text-sm text-gray-700 mt-1">
+                            Your order qualifies for automated Lagos delivery.
+                          </p>
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <div className="rounded-lg border border-red-200 bg-red-50 p-4">
+                        <p className="text-sm font-medium text-red-900">
+                          Manual delivery required
+                        </p>
+                        <p className="text-sm text-red-700 mt-1">
+                          Automated Lagos delivery (e.g. Waka Line) is not available for
+                          this order. Our team will coordinate delivery with you.
+                        </p>
+                      </div>
+                    );
+                  })()}
+                </CardContent>
+              </Card>
+            )}
 
             {/* Coupon Code Section */}
             <Card className="mt-6">
@@ -1373,20 +1837,31 @@ const CheckoutPage: React.FC = () => {
                 </div>
 
                 {/* Place Order Button */}
-                <Button
-                  onClick={handlePlaceOrder}
-                  disabled={isProcessing}
-                  className="w-full mt-8 bg-[#8DEB6E] hover:bg-[#8DEB6E]/90 text-primary py-3 text-base font-medium border border-[#2ac12a]"
-                >
-                  {isProcessing ? (
-                    <div className="flex items-center justify-center space-x-2">
-                      <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
-                      <span>Processing...</span>
-                    </div>
-                  ) : (
-                    "Place Order"
-                  )}
-                </Button>
+                {selectedPayment !== "buy-now-pay-later" && (
+                  <Button
+                    onClick={handlePlaceOrder}
+                    disabled={
+                      isProcessing ||
+                      isValidatingDelivery ||
+                      isDeliveryValidationLoading
+                    }
+                    className="w-full mt-8 bg-[#8DEB6E] hover:bg-[#8DEB6E]/90 text-primary py-3 text-base font-medium border border-[#2ac12a]"
+                  >
+                    {isValidatingDelivery || isDeliveryValidationLoading ? (
+                      <div className="flex items-center justify-center space-x-2">
+                        <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+                        <span>Checking delivery...</span>
+                      </div>
+                    ) : isProcessing ? (
+                      <div className="flex items-center justify-center space-x-2">
+                        <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+                        <span>Processing...</span>
+                      </div>
+                    ) : (
+                      "Place Order"
+                    )}
+                  </Button>
+                )}
               </CardContent>
             </Card>
           </div>
@@ -1401,6 +1876,512 @@ const CheckoutPage: React.FC = () => {
             isGuest={isGuestCheckoutFlow}
             onClose={handleSuccessClose}
           />
+        )}
+
+        {showBnplModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+            <div className="w-full max-w-2xl rounded-xl bg-white shadow-2xl">
+              <div className="flex items-center justify-between border-b border-gray-200 px-5 py-4">
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Buy Now, Pay Later
+                </h3>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleCloseBnplModal}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  Close
+                </Button>
+              </div>
+
+              <div className="p-5">
+                {bnplStep === "info" && (
+                  <div className="space-y-4">
+                    <h4 className="text-base font-semibold text-gray-900">
+                      Split your payment into flexible installments
+                    </h4>
+                    <div className="text-sm text-gray-700 space-y-2">
+                      <p>
+                        Choose BNPL to spread payments with clear terms before
+                        completing your order.
+                      </p>
+                      <p>
+                        <span className="font-medium">Duration:</span> Up to 3
+                        monthly installments
+                      </p>
+                      <p>
+                        <span className="font-medium">Interest:</span> 0% for
+                        eligible users
+                      </p>
+                    </div>
+                    <Button
+                      type="button"
+                      className="w-full bg-[#8DEB6E] hover:bg-[#8DEB6E]/90 text-primary border border-[#2ac12a]"
+                      onClick={() => {
+                        setBnplFormStep("identity");
+                        setBnplStep("form");
+                      }}
+                    >
+                      Continue with BNPL
+                    </Button>
+                  </div>
+                )}
+
+                {bnplStep === "form" && (
+                  <div className="space-y-4">
+                    <h4 className="text-base font-semibold text-gray-900">
+                      BNPL Application Form
+                    </h4>
+                    {bnplFormStep === "identity" && (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                          <label className="text-sm font-medium text-gray-700">
+                            First Name
+                          </label>
+                          <Input
+                            value={bnplProfile.first_name}
+                            onChange={(e) =>
+                              handleBnplProfileChange(
+                                "first_name",
+                                e.target.value
+                              )
+                            }
+                            placeholder="First name"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-sm font-medium text-gray-700">
+                            Last Name
+                          </label>
+                          <Input
+                            value={bnplProfile.last_name}
+                            onChange={(e) =>
+                              handleBnplProfileChange(
+                                "last_name",
+                                e.target.value
+                              )
+                            }
+                            placeholder="Last name"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-sm font-medium text-gray-700">
+                            Phone
+                          </label>
+                          <Input
+                            value={bnplProfile.phone}
+                            onChange={(e) =>
+                              handleBnplProfileChange("phone", e.target.value)
+                            }
+                            placeholder="+2348012345678"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-sm font-medium text-gray-700">
+                            Email
+                          </label>
+                          <Input
+                            type="email"
+                            value={bnplProfile.email}
+                            onChange={(e) =>
+                              handleBnplProfileChange("email", e.target.value)
+                            }
+                            placeholder="email@example.com"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-sm font-medium text-gray-700">
+                            Partner Reference
+                          </label>
+                          <Input
+                            value={bnplProfile.partner_ref}
+                            onChange={(e) =>
+                              handleBnplProfileChange(
+                                "partner_ref",
+                                e.target.value
+                              )
+                            }
+                            placeholder="Partner reference"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-sm font-medium text-gray-700">
+                            BVN
+                          </label>
+                          <Input
+                            value={bnplProfile.bvn}
+                            onChange={(e) =>
+                              handleBnplProfileChange("bvn", e.target.value)
+                            }
+                            placeholder="22345678901"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-sm font-medium text-gray-700">
+                            NIN
+                          </label>
+                          <Input
+                            value={bnplProfile.nin}
+                            onChange={(e) =>
+                              handleBnplProfileChange("nin", e.target.value)
+                            }
+                            placeholder="12345678901"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-sm font-medium text-gray-700">
+                            Date of Birth
+                          </label>
+                          <Input
+                            type="date"
+                            value={bnplProfile.date_of_birth}
+                            onChange={(e) =>
+                              handleBnplProfileChange(
+                                "date_of_birth",
+                                e.target.value
+                              )
+                            }
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-sm font-medium text-gray-700">
+                            Gender
+                          </label>
+                          <select
+                            value={bnplProfile.gender}
+                            onChange={(e) =>
+                              setBnplProfile((prev) => ({
+                                ...prev,
+                                gender: Number(e.target.value),
+                              }))
+                            }
+                            className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                          >
+                            <option value={1}>Male</option>
+                            <option value={2}>Female</option>
+                            <option value={3}>Other</option>
+                          </select>
+                        </div>
+                        <div className="space-y-1 sm:col-span-2">
+                          <label className="text-sm font-medium text-gray-700">
+                            State of Origin
+                          </label>
+                          <Input
+                            value={bnplProfile.state_of_origin}
+                            onChange={(e) =>
+                              handleBnplProfileChange(
+                                "state_of_origin",
+                                e.target.value
+                              )
+                            }
+                            placeholder="Lagos"
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {bnplFormStep === "identity" && (
+                      <Button
+                        type="button"
+                        className="w-full bg-[#8DEB6E] hover:bg-[#8DEB6E]/90 text-primary border border-[#2ac12a]"
+                        onClick={() => {
+                          setBnplValidationError(null);
+                          setBnplFormStep("details");
+                        }}
+                      >
+                        Next
+                      </Button>
+                    )}
+
+                    {bnplFormStep === "details" && (
+                      <>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="w-full"
+                          onClick={() => {
+                            setBnplValidationError(null);
+                            setBnplFormStep("identity");
+                          }}
+                        >
+                          Back
+                        </Button>
+                        <div className="rounded-lg border border-gray-200 p-3 space-y-3">
+                      <h5 className="text-sm font-semibold text-gray-900">
+                        Home Address
+                      </h5>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="space-y-1 sm:col-span-2">
+                          <label className="text-sm font-medium text-gray-700">
+                            Street
+                          </label>
+                          <Input
+                            value={bnplProfile.home_address.street}
+                            onChange={(e) =>
+                              handleBnplHomeAddressChange("street", e.target.value)
+                            }
+                            placeholder="45 Ozumba Mbadiwe Rd"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-sm font-medium text-gray-700">
+                            Town
+                          </label>
+                          <Input
+                            value={bnplProfile.home_address.town}
+                            onChange={(e) =>
+                              handleBnplHomeAddressChange("town", e.target.value)
+                            }
+                            placeholder="Lekki"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-sm font-medium text-gray-700">
+                            State
+                          </label>
+                          <Input
+                            value={bnplProfile.home_address.state}
+                            onChange={(e) =>
+                              handleBnplHomeAddressChange("state", e.target.value)
+                            }
+                            placeholder="Lagos"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="rounded-lg border border-gray-200 p-3 space-y-3">
+                      <h5 className="text-sm font-semibold text-gray-900">
+                        Work Information
+                      </h5>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                          <label className="text-sm font-medium text-gray-700">
+                            Company
+                          </label>
+                          <Input
+                            value={bnplProfile.work_information.company}
+                            onChange={(e) =>
+                              handleBnplWorkInfoChange("company", e.target.value)
+                            }
+                            placeholder="Unilever Nigeria Ltd."
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-sm font-medium text-gray-700">
+                            Job Role
+                          </label>
+                          <Input
+                            value={bnplProfile.work_information.job_role}
+                            onChange={(e) =>
+                              handleBnplWorkInfoChange("job_role", e.target.value)
+                            }
+                            placeholder="Head of Finance"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-sm font-medium text-gray-700">
+                            Monthly Salary
+                          </label>
+                          <Input
+                            type="number"
+                            value={bnplProfile.work_information.monthly_salary}
+                            onChange={(e) =>
+                              setBnplProfile((prev) => ({
+                                ...prev,
+                                work_information: {
+                                  ...prev.work_information,
+                                  monthly_salary: Number(e.target.value || 0),
+                                },
+                              }))
+                            }
+                            placeholder="540000000"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-sm font-medium text-gray-700">
+                            Start Date
+                          </label>
+                          <Input
+                            value={bnplProfile.work_information.start_date}
+                            onChange={(e) =>
+                              handleBnplWorkInfoChange("start_date", e.target.value)
+                            }
+                            placeholder="31-09-1977"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="rounded-md border border-gray-200 p-3 space-y-3">
+                        <h6 className="text-sm font-semibold text-gray-900">
+                          Office Address
+                        </h6>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div className="space-y-1 sm:col-span-2">
+                            <label className="text-sm font-medium text-gray-700">
+                              Street
+                            </label>
+                            <Input
+                              value={bnplProfile.work_information.office_address.street}
+                              onChange={(e) =>
+                                handleBnplOfficeAddressChange("street", e.target.value)
+                              }
+                              placeholder="45 Ozumba Mbadiwe Rd"
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-sm font-medium text-gray-700">
+                              Town
+                            </label>
+                            <Input
+                              value={bnplProfile.work_information.office_address.town}
+                              onChange={(e) =>
+                                handleBnplOfficeAddressChange("town", e.target.value)
+                              }
+                              placeholder="Lekki"
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-sm font-medium text-gray-700">
+                              State
+                            </label>
+                            <Input
+                              value={bnplProfile.work_information.office_address.state}
+                              onChange={(e) =>
+                                handleBnplOfficeAddressChange("state", e.target.value)
+                              }
+                              placeholder="Lagos"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    {bnplValidationError && (
+                      <p className="text-sm text-red-600">{bnplValidationError}</p>
+                    )}
+                    <Button
+                      type="button"
+                      className="w-full bg-[#8DEB6E] hover:bg-[#8DEB6E]/90 text-primary border border-[#2ac12a]"
+                      onClick={handleBnplApplicationSubmit}
+                    >
+                      Submit Application
+                    </Button>
+                      </>
+                    )}
+                  </div>
+                )}
+
+                {bnplStep === "otp" && (
+                  <div className="space-y-4">
+                    <h4 className="text-base font-semibold text-gray-900">
+                      Enter OTP
+                    </h4>
+
+                    <p className="text-sm text-gray-700">
+                      We've sent a 6-digit OTP to{" "}
+                      <span className="font-medium text-gray-900">
+                        {bnplProfile.phone}
+                      </span>
+                      .
+                    </p>
+
+                    <div className="space-y-1">
+                      <label className="text-sm font-medium text-gray-700">
+                        OTP
+                      </label>
+                      <Input
+                        value={bnplOtp}
+                        onChange={(e) => {
+                          const raw = e.target.value ?? "";
+                          setBnplOtp(raw.replace(/\D/g, "").slice(0, 6));
+                          setBnplOtpError(null);
+                        }}
+                        placeholder="123456"
+                        inputMode="numeric"
+                      />
+                    </div>
+
+                    {bnplOtpError && (
+                      <p className="text-sm text-red-600">{bnplOtpError}</p>
+                    )}
+
+                    <div className="flex items-center gap-3">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="w-1/2"
+                        onClick={() => {
+                          setBnplOtp("");
+                          setBnplOtpError(null);
+                          setBnplFormStep("details");
+                          setBnplStep("form");
+                        }}
+                      >
+                        Back
+                      </Button>
+
+                      <Button
+                        type="button"
+                        className="w-1/2 bg-[#8DEB6E] hover:bg-[#8DEB6E]/90 text-primary border border-[#2ac12a]"
+                        onClick={handleBnplOtpVerify}
+                      >
+                        Verify OTP
+                      </Button>
+                    </div>
+
+                    <p className="text-xs text-gray-500">
+                      Demo OTP: <span className="font-medium">123456</span>
+                    </p>
+                  </div>
+                )}
+
+                {bnplStep === "processing" && (
+                  <div className="py-6 text-center">
+                    <div className="flex flex-col items-center justify-center gap-3">
+                      <div className="w-8 h-8 border-4 border-[#182F38] border-t-transparent rounded-full animate-spin" />
+                      <p className="text-sm text-gray-700">
+                        We are reviewing your application...
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {bnplStep === "decision" && bnplStatus && (
+                  <div className="space-y-2">
+                    <h4 className="text-base font-semibold text-gray-900 capitalize">
+                      Application submitted successfully
+                    </h4>
+                    {bnplStatus === "pending" && (
+                      <p className="text-sm text-amber-700 font-medium">
+                        Your BNPL application is currently being reviewed.
+                      </p>
+                    )}
+                    <p className="text-sm text-gray-600">
+                      Our team is reviewing your details.
+                    </p>
+                    {bnplStatus === "rejected" && (
+                      <>
+                        <p className="text-sm text-red-700">
+                          Application was rejected. Please use Bank/Card to
+                          complete this order.
+                        </p>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="w-full"
+                          onClick={handleCloseBnplModal}
+                        >
+                          Switch to Bank/Card
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </div>

@@ -2,6 +2,7 @@ import React from 'react';
 import { Card, CardContent } from '../UI';
 import type { CartItem } from '../../types';
 import { formatPrice } from '../../lib/productUtils';
+import { cn } from '../../lib/utils';
 
 interface OrderSummaryProps {
   items: CartItem[];
@@ -14,6 +15,8 @@ interface OrderSummaryProps {
   showTitle?: boolean;
   compact?: boolean;
   appliedCoupon?: string | null;
+  /** Highlight lines (e.g. non-Lagos items in mixed-cart checkout). */
+  highlightProductIds?: string[];
 }
 
 const OrderSummary: React.FC<OrderSummaryProps> = ({
@@ -27,7 +30,12 @@ const OrderSummary: React.FC<OrderSummaryProps> = ({
   showTitle = true,
   compact = false,
   appliedCoupon = null,
+  highlightProductIds,
 }) => {
+  const highlightSet =
+    highlightProductIds && highlightProductIds.length > 0
+      ? new Set(highlightProductIds)
+      : null;
   return (
     <Card>
       <CardContent className={compact ? "p-4" : "p-6"}>
@@ -45,9 +53,18 @@ const OrderSummary: React.FC<OrderSummaryProps> = ({
               const currentPrice = typeof product.price === 'number' 
                 ? product.price 
                 : product.price.current;
+              const isHighlighted =
+                highlightSet?.has(product.id) ?? false;
               
               return (
-                <div key={item.id} className="flex items-center space-x-4">
+                <div
+                  key={item.id}
+                  className={cn(
+                    "flex items-center space-x-4 rounded-lg p-2 -mx-2 transition-colors",
+                    isHighlighted &&
+                      "bg-green-50 ring-1 ring-green-200/80"
+                  )}
+                >
                   <div className="w-16 h-16 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
                     <img
                       src={product.images.main}

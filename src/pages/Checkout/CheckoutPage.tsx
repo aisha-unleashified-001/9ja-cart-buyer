@@ -306,9 +306,6 @@ const CheckoutPage: React.FC = () => {
     }, 0);
   }, [itemsForCheckout]);
 
-  const shipping = cartShipping;
-  const total = cartSubtotal + shipping + flatRate - discount;
-
   const buyerAddressForDelivery = useMemo(
     () => buildBuyerAddressLine(billingDetails, selectedAddress),
     [billingDetails, selectedAddress]
@@ -358,6 +355,23 @@ const CheckoutPage: React.FC = () => {
     !deliveryValidation?.isMixedCart &&
     !deliveryValidation?.manualDeliveryRequired &&
     !inferredMixedDelivery;
+
+  const shipping = useMemo(() => {
+    const scenario = (deliveryValidation?.scenario ?? "").toUpperCase();
+    const fee = deliveryValidation?.automatedDeliveryFee;
+    if (
+      scenario === "D" &&
+      showAutomatedDeliveryUi &&
+      typeof fee === "number" &&
+      Number.isFinite(fee) &&
+      fee > 0
+    ) {
+      return fee;
+    }
+    return cartShipping;
+  }, [deliveryValidation?.scenario, deliveryValidation?.automatedDeliveryFee, showAutomatedDeliveryUi, cartShipping]);
+
+  const total = cartSubtotal + shipping + flatRate - discount;
 
   const hideManualDeliveryUi =
     checkoutExcludedProductIds.length > 0 && !showMixedCartBanner;
@@ -1556,9 +1570,13 @@ const CheckoutPage: React.FC = () => {
                   <div>
                     <p className="font-medium">Mixed cart</p>
                     <p className="text-sm text-green-900/90">
-                      Your cart has both Lagos and non-Lagos items. Non-Lagos items are
-                      highlighted below. Remove them from this checkout to continue, or
-                      change your cart on the cart page.
+                      Some items in your cart are from vendors located outside Lagos.
+                      At the moment, automated delivery is only available for orders
+                      where both pickup and delivery locations are within Lagos.
+                      Delivery for items outside Lagos is currently handled manually,
+                      and our support team will contact you to confirm delivery
+                      arrangements and pricing. To continue with automated checkout,
+                      you can remove items from vendors outside Lagos.
                     </p>
                   </div>
                   <div className="space-y-2">
@@ -1678,8 +1696,11 @@ const CheckoutPage: React.FC = () => {
                           Manual delivery required
                         </p>
                         <p className="text-sm text-red-700 mt-1">
-                          Automated Lagos delivery (e.g. Waka Line) is not available for
-                          this order. Our team will coordinate delivery with you.
+                          This item is from a vendor outside Lagos. Automated
+                          delivery is currently limited to Lagos (pickup and
+                          drop-off). If you proceed, our customer service team
+                          will contact you to arrange delivery and confirm the
+                          delivery cost separately.
                         </p>
                       </div>
                     );

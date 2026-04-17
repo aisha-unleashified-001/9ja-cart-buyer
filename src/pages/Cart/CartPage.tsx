@@ -262,9 +262,13 @@ const CartPage: React.FC = () => {
             title="Mixed cart detected"
             className="mb-6 border-green-200 bg-green-50"
           >
-            Some products are from non-Lagos vendors and require manual delivery.
-            These products are highlighted below. You can proceed to checkout and
-            remove non-Lagos items there.
+            Some items in your cart are from vendors located outside Lagos.
+            At the moment, automated delivery is only available for orders where
+            both pickup and delivery locations are within Lagos. Delivery for
+            items outside Lagos is currently handled manually, and our support
+            team will contact you to confirm delivery arrangements and pricing.
+            To continue with automated checkout, you can remove items from
+            vendors outside Lagos.
           </Alert>
         )}
 

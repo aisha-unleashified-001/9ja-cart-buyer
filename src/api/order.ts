@@ -91,6 +91,9 @@ export interface NormalizedDeliveryValidation {
   fullManualDelivery: boolean;
   partialManualDelivery: boolean;
   automatedDeliveryEligible: boolean;
+  scenario?: string;
+  deliveryMode?: string;
+  automatedDeliveryFee?: number;
   /** Product IDs that must be removed from checkout for Lagos-only automated flow (non-Lagos vendor items). */
   affectedProductIds: string[];
   deliveryOptions: DeliveryOptionDto[];
@@ -221,6 +224,7 @@ export function parseValidateDeliveryResponse(payload: unknown): NormalizedDeliv
   const manualDeliveryRequired =
     pickBool(o, [
       "manualDeliveryRequired",
+      "manualRequired",
       "requiresManualDelivery",
       "manual_delivery_required",
       "isManualDelivery",
@@ -232,6 +236,7 @@ export function parseValidateDeliveryResponse(payload: unknown): NormalizedDeliv
   const automatedDeliveryEligible =
     pickBool(o, [
       "automatedDeliveryEligible",
+      "automatedEligible",
       "isAutomatedDelivery",
       "automated_delivery",
       "eligibleForAutomatedDelivery",
@@ -314,11 +319,12 @@ export function parseValidateDeliveryResponse(payload: unknown): NormalizedDeliv
     o.options ??
     o.automatedDeliveryOptions ??
     o.automated_options ??
-    o.automatedOptions;
+    o.automatedOptions ??
+    o.deliveryProviders;
   if (Array.isArray(rawOpts)) {
     deliveryOptions = rawOpts.map((x) => {
       const r = asRecord(x) ?? {};
-      const rawPrice = r.price ?? r.amount ?? r.cost;
+      const rawPrice = r.price ?? r.amount ?? r.cost ?? r.deliveryFee;
       let price: number | undefined;
       if (typeof rawPrice === "number" && Number.isFinite(rawPrice)) price = rawPrice;
       else if (typeof rawPrice === "string") {
@@ -382,6 +388,17 @@ export function parseValidateDeliveryResponse(payload: unknown): NormalizedDeliv
   const partialManualDelivery = isMixedCart || (affectedProductIds.length > 0 && manualDeliveryRequired);
   const fullManualDelivery =
     manualDeliveryRequired && !isMixedCart && affectedProductIds.length === 0;
+  const scenario =
+    typeof o.scenario === "string" ? o.scenario : undefined;
+  const deliveryMode =
+    typeof o.deliveryMode === "string"
+      ? o.deliveryMode
+      : typeof o.delivery_mode === "string"
+        ? o.delivery_mode
+        : undefined;
+  const automatedDeliveryFee =
+    wakaLine?.price ??
+    deliveryOptions.find((x) => typeof x.price === "number")?.price;
 
   return {
     isMixedCart,
@@ -389,6 +406,9 @@ export function parseValidateDeliveryResponse(payload: unknown): NormalizedDeliv
     fullManualDelivery,
     partialManualDelivery,
     automatedDeliveryEligible,
+    scenario,
+    deliveryMode,
+    automatedDeliveryFee,
     affectedProductIds,
     deliveryOptions,
     wakaLine,

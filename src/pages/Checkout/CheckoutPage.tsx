@@ -9,6 +9,7 @@ import {
   AlertCircle,
   User,
   Plus,
+  X,
 } from "lucide-react";
 import {
   Button,
@@ -90,16 +91,61 @@ type BnplStep = "info" | "form" | "otp" | "processing" | "decision";
 type BnplFormStep = "identity" | "details";
 
 const CHECKOUT_GUEST_PARAM = "guest";
+const BNPL_INPUT_STROKE_CLASS = "w-full !border-gray-400";
+const BNPL_OTP_LENGTH = 6;
+const NIGERIAN_STATES = [
+  "Abia",
+  "Adamawa",
+  "Akwa Ibom",
+  "Anambra",
+  "Bauchi",
+  "Bayelsa",
+  "Benue",
+  "Borno",
+  "Cross River",
+  "Delta",
+  "Ebonyi",
+  "Edo",
+  "Ekiti",
+  "Enugu",
+  "FCT",
+  "Gombe",
+  "Imo",
+  "Jigawa",
+  "Kaduna",
+  "Kano",
+  "Katsina",
+  "Kebbi",
+  "Kogi",
+  "Kwara",
+  "Lagos",
+  "Nasarawa",
+  "Niger",
+  "Ogun",
+  "Ondo",
+  "Osun",
+  "Oyo",
+  "Plateau",
+  "Rivers",
+  "Sokoto",
+  "Taraba",
+  "Yobe",
+  "Zamfara",
+] as const;
 
 function buildBuyerAddressLine(
   billing: BillingDetailsForm,
   selectedAddress: UserAddress | null
 ): string {
+  const normalizedBillingState = billing.townCity?.trim().toLowerCase();
+  const normalizedSelectedState = selectedAddress?.state?.trim().toLowerCase();
   const parts = [
     billing.streetAddress?.trim(),
     billing.apartment?.trim(),
     billing.townCity?.trim(),
-    selectedAddress?.state?.trim(),
+    normalizedSelectedState && normalizedSelectedState !== normalizedBillingState
+      ? selectedAddress?.state?.trim()
+      : "",
   ].filter(Boolean);
   return parts.join(", ");
 }
@@ -127,6 +173,7 @@ const CheckoutPage: React.FC = () => {
   const [bnplOtp, setBnplOtp] = useState("");
   const [bnplOtpError, setBnplOtpError] = useState<string | null>(null);
   const [bnplOtpTarget] = useState("123456"); // Frontend demo OTP; no API interaction.
+  const bnplOtpInputRefs = useRef<Array<HTMLInputElement | null>>([]);
   const [bnplProfile, setBnplProfile] = useState<BnplProfileForm>({
     first_name: "Adebayo",
     last_name: "Ogunlesi",
@@ -230,7 +277,7 @@ const CheckoutPage: React.FC = () => {
           emailAddress: user?.email || profile.email || prev.emailAddress || "",
           phoneNumber: user?.phone || profile.phone || prev.phoneNumber || "",
           streetAddress: defaultAddress.streetAddress || prev.streetAddress || "",
-          townCity: defaultAddress.city || prev.townCity || "",
+          townCity: defaultAddress.state || prev.townCity || "",
           apartment: prev.apartment || "",
         }));
         setShowAddressForm(false); // Hide form since we have default address
@@ -393,7 +440,7 @@ const CheckoutPage: React.FC = () => {
         ...prev,
         // Preserve all existing form values (phone, email, etc.)
         streetAddress: selectedAddress.streetAddress || prev.streetAddress || "",
-        townCity: selectedAddress.city || prev.townCity || "",
+        townCity: selectedAddress.state || prev.townCity || "",
         // Keep all other fields as they are
       }));
     }
@@ -414,7 +461,7 @@ const CheckoutPage: React.FC = () => {
       ...prev,
       // Preserve all existing form values, only update address fields
       streetAddress: address.streetAddress || prev.streetAddress || "",
-      townCity: address.city || prev.townCity || "",
+      townCity: address.state || prev.townCity || "",
       // Ensure other fields are populated if empty, but preserve existing values first
       firstName: prev.firstName || user?.firstName || profile?.firstName || "",
       lastName: prev.lastName || user?.lastName || profile?.lastName || "",
@@ -448,7 +495,7 @@ const CheckoutPage: React.FC = () => {
     setAddressSavedSuccess(false);
 
     if (!billingDetails.streetAddress?.trim() || !billingDetails.townCity?.trim()) {
-      setAddressSaveError("Please enter street address and city.");
+      setAddressSaveError("Please enter street address and state.");
       return;
     }
 
@@ -456,7 +503,7 @@ const CheckoutPage: React.FC = () => {
       const newAddress: Omit<UserAddress, "id" | "createdAt" | "updatedAt"> = {
         streetAddress: billingDetails.streetAddress.trim(),
         city: billingDetails.townCity.trim(),
-        state: "Lagos", // Default for now - could be made dynamic
+        state: billingDetails.townCity.trim(),
         zipCode: "100001", // Default for now - could be made dynamic
         country: "Nigeria",
         isDefault: newAddressAsDefault,
@@ -686,8 +733,8 @@ const CheckoutPage: React.FC = () => {
   };
 
   const handleBnplOtpVerify = async () => {
-    const otp = bnplOtp.replace(/\D/g, "").slice(0, 6);
-    if (otp.length !== 6) {
+    const otp = bnplOtp.replace(/\D/g, "").slice(0, BNPL_OTP_LENGTH);
+    if (otp.length !== BNPL_OTP_LENGTH) {
       setBnplOtpError("Enter the 6-digit OTP sent to your phone.");
       return;
     }
@@ -703,6 +750,48 @@ const CheckoutPage: React.FC = () => {
     await new Promise((resolve) => setTimeout(resolve, 1500));
     setBnplStatus("pending");
     setBnplStep("decision");
+  };
+
+  const handleBnplOtpChange = (index: number, value: string) => {
+    const digit = value.replace(/\D/g, "").slice(-1);
+    const otpChars = bnplOtp.padEnd(BNPL_OTP_LENGTH, " ").split("");
+    otpChars[index] = digit || " ";
+    const nextOtp = otpChars.join("").replace(/\s/g, "");
+    setBnplOtp(nextOtp);
+    setBnplOtpError(null);
+
+    if (digit && index < BNPL_OTP_LENGTH - 1) {
+      bnplOtpInputRefs.current[index + 1]?.focus();
+    }
+  };
+
+  const handleBnplOtpKeyDown = (
+    index: number,
+    event: React.KeyboardEvent<HTMLInputElement>
+  ) => {
+    if (event.key !== "Backspace") return;
+
+    const otpChars = bnplOtp.padEnd(BNPL_OTP_LENGTH, " ").split("");
+    if (otpChars[index]?.trim()) return;
+
+    if (index > 0) {
+      bnplOtpInputRefs.current[index - 1]?.focus();
+    }
+  };
+
+  const handleBnplOtpPaste = (event: React.ClipboardEvent<HTMLInputElement>) => {
+    event.preventDefault();
+    const pastedDigits = event.clipboardData
+      .getData("text")
+      .replace(/\D/g, "")
+      .slice(0, BNPL_OTP_LENGTH);
+
+    if (!pastedDigits) return;
+
+    setBnplOtp(pastedDigits);
+    setBnplOtpError(null);
+    const focusIndex = Math.min(pastedDigits.length, BNPL_OTP_LENGTH - 1);
+    bnplOtpInputRefs.current[focusIndex]?.focus();
   };
 
   const handleCloseBnplModal = () => {
@@ -809,11 +898,22 @@ const CheckoutPage: React.FC = () => {
           "Complete your shipping address and ensure your cart has items to validate delivery."
         );
       }
-      const raw = await orderApi.validateDelivery({
-        buyerAddress,
-        cartItems: cartPayload,
-      });
-      const normalized = parseValidateDeliveryResponse(raw);
+      const hasUsableCachedValidation =
+        Boolean(deliveryValidation) &&
+        !deliveryValidationError &&
+        !isDeliveryValidationLoading;
+
+      // Fast path: if delivery was already validated for current checkout state,
+      // reuse it to avoid an extra pre-checkout network round-trip.
+      const normalized =
+        hasUsableCachedValidation && deliveryValidation
+          ? deliveryValidation
+          : parseValidateDeliveryResponse(
+              await orderApi.validateDelivery({
+                buyerAddress,
+                cartItems: cartPayload,
+              })
+            );
 
       const checkoutPids = itemsForCheckout.map((i) => i.product.id);
       const hasAffectedStillInCheckout = normalized.affectedProductIds.some((id) =>
@@ -1293,24 +1393,31 @@ const CheckoutPage: React.FC = () => {
                       />
                     </div>
 
-                    {/* Town/City */}
+                    {/* State */}
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Town/City*
+                        State*
                       </label>
-                      <Input
+                      <select
                         name="townCity"
                         value={billingDetails.townCity}
                         onChange={(e) =>
                           handleInputChange("townCity", e.target.value)
                         }
                         className={cn(
-                          "w-full !border-gray-400",
+                          "h-10 w-full rounded-md border border-gray-400 bg-background px-3 py-2 text-sm",
                           getFieldError("townCity") &&
                             "border-red-500 focus:ring-red-500"
                         )}
                         required
-                      />
+                      >
+                        <option value="">Select state</option>
+                        {NIGERIAN_STATES.map((state) => (
+                          <option key={state} value={state}>
+                            {state}
+                          </option>
+                        ))}
+                      </select>
                       {getFieldError("townCity") && (
                         <div className="flex items-center mt-1 text-sm text-red-600">
                           <AlertCircle className="w-4 h-4 mr-1" />
@@ -1911,9 +2018,10 @@ const CheckoutPage: React.FC = () => {
                   variant="ghost"
                   size="sm"
                   onClick={handleCloseBnplModal}
-                  className="text-gray-500 hover:text-gray-700"
+                  className="text-gray-500 hover:text-gray-700 p-1"
+                  aria-label="Close BNPL modal"
                 >
-                  Close
+                  <X className="h-5 w-5" />
                 </Button>
               </div>
 
@@ -1970,6 +2078,7 @@ const CheckoutPage: React.FC = () => {
                               )
                             }
                             placeholder="First name"
+                            className={BNPL_INPUT_STROKE_CLASS}
                           />
                         </div>
                         <div className="space-y-1">
@@ -1985,6 +2094,7 @@ const CheckoutPage: React.FC = () => {
                               )
                             }
                             placeholder="Last name"
+                            className={BNPL_INPUT_STROKE_CLASS}
                           />
                         </div>
                         <div className="space-y-1">
@@ -1997,6 +2107,7 @@ const CheckoutPage: React.FC = () => {
                               handleBnplProfileChange("phone", e.target.value)
                             }
                             placeholder="+2348012345678"
+                            className={BNPL_INPUT_STROKE_CLASS}
                           />
                         </div>
                         <div className="space-y-1">
@@ -2010,6 +2121,7 @@ const CheckoutPage: React.FC = () => {
                               handleBnplProfileChange("email", e.target.value)
                             }
                             placeholder="email@example.com"
+                            className={BNPL_INPUT_STROKE_CLASS}
                           />
                         </div>
                         <div className="space-y-1">
@@ -2025,6 +2137,7 @@ const CheckoutPage: React.FC = () => {
                               )
                             }
                             placeholder="Partner reference"
+                            className={BNPL_INPUT_STROKE_CLASS}
                           />
                         </div>
                         <div className="space-y-1">
@@ -2037,6 +2150,7 @@ const CheckoutPage: React.FC = () => {
                               handleBnplProfileChange("bvn", e.target.value)
                             }
                             placeholder="22345678901"
+                            className={BNPL_INPUT_STROKE_CLASS}
                           />
                         </div>
                         <div className="space-y-1">
@@ -2049,6 +2163,7 @@ const CheckoutPage: React.FC = () => {
                               handleBnplProfileChange("nin", e.target.value)
                             }
                             placeholder="12345678901"
+                            className={BNPL_INPUT_STROKE_CLASS}
                           />
                         </div>
                         <div className="space-y-1">
@@ -2064,6 +2179,7 @@ const CheckoutPage: React.FC = () => {
                                 e.target.value
                               )
                             }
+                            className={BNPL_INPUT_STROKE_CLASS}
                           />
                         </div>
                         <div className="space-y-1">
@@ -2078,7 +2194,7 @@ const CheckoutPage: React.FC = () => {
                                 gender: Number(e.target.value),
                               }))
                             }
-                            className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                            className="h-10 w-full rounded-md border border-gray-400 bg-background px-3 py-2 text-sm"
                           >
                             <option value={1}>Male</option>
                             <option value={2}>Female</option>
@@ -2098,6 +2214,7 @@ const CheckoutPage: React.FC = () => {
                               )
                             }
                             placeholder="Lagos"
+                            className={BNPL_INPUT_STROKE_CLASS}
                           />
                         </div>
                       </div>
@@ -2118,17 +2235,6 @@ const CheckoutPage: React.FC = () => {
 
                     {bnplFormStep === "details" && (
                       <>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          className="w-full"
-                          onClick={() => {
-                            setBnplValidationError(null);
-                            setBnplFormStep("identity");
-                          }}
-                        >
-                          Back
-                        </Button>
                         <div className="rounded-lg border border-gray-200 p-3 space-y-3">
                       <h5 className="text-sm font-semibold text-gray-900">
                         Home Address
@@ -2144,6 +2250,7 @@ const CheckoutPage: React.FC = () => {
                               handleBnplHomeAddressChange("street", e.target.value)
                             }
                             placeholder="45 Ozumba Mbadiwe Rd"
+                            className={BNPL_INPUT_STROKE_CLASS}
                           />
                         </div>
                         <div className="space-y-1">
@@ -2156,6 +2263,7 @@ const CheckoutPage: React.FC = () => {
                               handleBnplHomeAddressChange("town", e.target.value)
                             }
                             placeholder="Lekki"
+                            className={BNPL_INPUT_STROKE_CLASS}
                           />
                         </div>
                         <div className="space-y-1">
@@ -2168,6 +2276,7 @@ const CheckoutPage: React.FC = () => {
                               handleBnplHomeAddressChange("state", e.target.value)
                             }
                             placeholder="Lagos"
+                            className={BNPL_INPUT_STROKE_CLASS}
                           />
                         </div>
                       </div>
@@ -2188,6 +2297,7 @@ const CheckoutPage: React.FC = () => {
                               handleBnplWorkInfoChange("company", e.target.value)
                             }
                             placeholder="Unilever Nigeria Ltd."
+                            className={BNPL_INPUT_STROKE_CLASS}
                           />
                         </div>
                         <div className="space-y-1">
@@ -2200,6 +2310,7 @@ const CheckoutPage: React.FC = () => {
                               handleBnplWorkInfoChange("job_role", e.target.value)
                             }
                             placeholder="Head of Finance"
+                            className={BNPL_INPUT_STROKE_CLASS}
                           />
                         </div>
                         <div className="space-y-1">
@@ -2219,6 +2330,7 @@ const CheckoutPage: React.FC = () => {
                               }))
                             }
                             placeholder="540000000"
+                            className={BNPL_INPUT_STROKE_CLASS}
                           />
                         </div>
                         <div className="space-y-1">
@@ -2231,6 +2343,7 @@ const CheckoutPage: React.FC = () => {
                               handleBnplWorkInfoChange("start_date", e.target.value)
                             }
                             placeholder="31-09-1977"
+                            className={BNPL_INPUT_STROKE_CLASS}
                           />
                         </div>
                       </div>
@@ -2250,6 +2363,7 @@ const CheckoutPage: React.FC = () => {
                                 handleBnplOfficeAddressChange("street", e.target.value)
                               }
                               placeholder="45 Ozumba Mbadiwe Rd"
+                              className={BNPL_INPUT_STROKE_CLASS}
                             />
                           </div>
                           <div className="space-y-1">
@@ -2262,6 +2376,7 @@ const CheckoutPage: React.FC = () => {
                                 handleBnplOfficeAddressChange("town", e.target.value)
                               }
                               placeholder="Lekki"
+                              className={BNPL_INPUT_STROKE_CLASS}
                             />
                           </div>
                           <div className="space-y-1">
@@ -2274,6 +2389,7 @@ const CheckoutPage: React.FC = () => {
                                 handleBnplOfficeAddressChange("state", e.target.value)
                               }
                               placeholder="Lagos"
+                              className={BNPL_INPUT_STROKE_CLASS}
                             />
                           </div>
                         </div>
@@ -2282,13 +2398,26 @@ const CheckoutPage: React.FC = () => {
                     {bnplValidationError && (
                       <p className="text-sm text-red-600">{bnplValidationError}</p>
                     )}
-                    <Button
-                      type="button"
-                      className="w-full bg-[#8DEB6E] hover:bg-[#8DEB6E]/90 text-primary border border-[#2ac12a]"
-                      onClick={handleBnplApplicationSubmit}
-                    >
-                      Submit Application
-                    </Button>
+                    <div className="flex items-center gap-3">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="w-1/2"
+                        onClick={() => {
+                          setBnplValidationError(null);
+                          setBnplFormStep("identity");
+                        }}
+                      >
+                        Back
+                      </Button>
+                      <Button
+                        type="button"
+                        className="w-1/2 bg-[#8DEB6E] hover:bg-[#8DEB6E]/90 text-primary border border-[#2ac12a]"
+                        onClick={handleBnplApplicationSubmit}
+                      >
+                        Submit Application
+                      </Button>
+                    </div>
                       </>
                     )}
                   </div>
@@ -2312,16 +2441,25 @@ const CheckoutPage: React.FC = () => {
                       <label className="text-sm font-medium text-gray-700">
                         OTP
                       </label>
-                      <Input
-                        value={bnplOtp}
-                        onChange={(e) => {
-                          const raw = e.target.value ?? "";
-                          setBnplOtp(raw.replace(/\D/g, "").slice(0, 6));
-                          setBnplOtpError(null);
-                        }}
-                        placeholder="123456"
-                        inputMode="numeric"
-                      />
+                      <div className="flex items-center gap-2">
+                        {Array.from({ length: BNPL_OTP_LENGTH }, (_, index) => (
+                          <Input
+                            key={`bnpl-otp-${index}`}
+                            ref={(el) => {
+                              bnplOtpInputRefs.current[index] = el;
+                            }}
+                            value={bnplOtp[index] || ""}
+                            onChange={(e) =>
+                              handleBnplOtpChange(index, e.target.value)
+                            }
+                            onKeyDown={(e) => handleBnplOtpKeyDown(index, e)}
+                            onPaste={handleBnplOtpPaste}
+                            inputMode="numeric"
+                            maxLength={1}
+                            className="h-11 w-11 text-center text-lg font-semibold border-gray-400"
+                          />
+                        ))}
+                      </div>
                     </div>
 
                     {bnplOtpError && (

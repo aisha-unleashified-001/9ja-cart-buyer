@@ -37,7 +37,7 @@ export const validateBillingDetails = (
   }
 
   if (!details.townCity.trim()) {
-    errors.push({ field: 'townCity', message: 'Town/City is required' });
+    errors.push({ field: 'townCity', message: 'State is required' });
   }
 
   const phoneTrim = details.phoneNumber.trim();

@@ -74,6 +74,28 @@ export interface ValidateDeliveryRequest {
   cartItems: ValidateDeliveryCartItem[];
 }
 
+/**
+ * Builds a stable fingerprint for validate-delivery payloads so we can
+ * dedupe identical in-flight requests across hook + manual trigger paths.
+ */
+export function getValidateDeliveryRequestKey(body: ValidateDeliveryRequest): string {
+  const normalizedAddress = body.buyerAddress.trim().toLowerCase();
+  const counts: Record<string, number> = {};
+  for (const item of body.cartItems) {
+    const id = String(item.productId ?? "").trim();
+    if (!id) continue;
+    counts[id] = (counts[id] ?? 0) + 1;
+  }
+  const normalizedItems = Object.entries(counts)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([id, qty]) => `${id}:${qty}`)
+    .join("|");
+  return `${normalizedAddress}::${normalizedItems}`;
+}
+
+/** Single-flight cache for in-progress validate-delivery requests. */
+const inFlightValidateDeliveryRequests = new Map<string, Promise<unknown>>();
+
 export interface DeliveryOptionDto {
   id?: string;
   name?: string;
@@ -603,12 +625,20 @@ export const orderApi = {
   validateDelivery: async (
     body: ValidateDeliveryRequest
   ): Promise<unknown> => {
-    return apiClient.post<unknown>(
-      "/order/checkout/validate-delivery",
-      body,
-      undefined,
-      false
-    );
+    const key = getValidateDeliveryRequestKey(body);
+    const existing = inFlightValidateDeliveryRequests.get(key);
+    if (existing) {
+      return existing;
+    }
+
+    const req = apiClient
+      .post<unknown>("/order/checkout/validate-delivery", body, undefined, false)
+      .finally(() => {
+        inFlightValidateDeliveryRequests.delete(key);
+      });
+
+    inFlightValidateDeliveryRequests.set(key, req);
+    return req;
   },
   
   // Get order details (requires Bearer token)

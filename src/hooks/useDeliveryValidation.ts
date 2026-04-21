@@ -64,7 +64,8 @@ export function useDeliveryValidation({
       setValidation(parseValidateDeliveryResponse(raw));
     } catch (e) {
       setError(apiErrorUtils.getErrorMessage(e));
-      setValidation(null);
+      // Preserve last successful validation to avoid UI regressions on transient API timeouts.
+      setValidation((prev) => prev);
     } finally {
       setIsLoading(false);
     }
@@ -102,7 +103,8 @@ export function useDeliveryValidation({
       } catch (e) {
         if (cancelled) return;
         setError(apiErrorUtils.getErrorMessage(e));
-        setValidation(null);
+        // Keep previously validated state when refresh fails transiently.
+        setValidation((prev) => prev);
       } finally {
         if (!cancelled) setIsLoading(false);
       }

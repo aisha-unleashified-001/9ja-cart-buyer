@@ -8,6 +8,7 @@ interface OrderSummaryProps {
   items: CartItem[];
   subtotal: number;
   shipping: number;
+  showShipping?: boolean;
   flatRate?: number;
   tax?: number;
   discount?: number;
@@ -23,6 +24,7 @@ const OrderSummary: React.FC<OrderSummaryProps> = ({
   items,
   subtotal,
   shipping,
+  showShipping = true,
   flatRate = 0,
   tax = 0,
   discount = 0,
@@ -104,12 +106,14 @@ const OrderSummary: React.FC<OrderSummaryProps> = ({
             <span className="font-medium">{formatPrice(subtotal)}</span>
           </div>
           
-          <div className="flex justify-between text-sm">
-            <span className="text-gray-600">Shipping:</span>
-            <span className={`font-medium ${shipping === 0 ? 'text-yellow-600' : ''}`}>
-              {shipping === 0 ? 'Incoming' : formatPrice(shipping)}
-            </span>
-          </div>
+          {showShipping && (
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-600">Shipping:</span>
+              <span className={`font-medium ${shipping === 0 ? 'text-yellow-600' : ''}`}>
+                {shipping === 0 ? 'Incoming' : formatPrice(shipping)}
+              </span>
+            </div>
+          )}
 
           {flatRate > 0 && (
             <div className="flex justify-between text-sm">

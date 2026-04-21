@@ -898,9 +898,14 @@ const CheckoutPage: React.FC = () => {
           "Complete your shipping address and ensure your cart has items to validate delivery."
         );
       }
+      const isTransientDeliveryValidationError =
+        Boolean(deliveryValidationError) &&
+        /timeout|timed out|network|unable to connect/i.test(
+          deliveryValidationError ?? ""
+        );
       const hasUsableCachedValidation =
         Boolean(deliveryValidation) &&
-        !deliveryValidationError &&
+        (!deliveryValidationError || isTransientDeliveryValidationError) &&
         !isDeliveryValidationLoading;
 
       // Fast path: if delivery was already validated for current checkout state,
@@ -1712,6 +1717,7 @@ const CheckoutPage: React.FC = () => {
               items={itemsForCheckout}
               subtotal={cartSubtotal}
               shipping={shipping}
+              showShipping={Boolean(deliveryValidation) && showAutomatedDeliveryUi}
               flatRate={flatRate}
               tax={0}
               discount={discount}

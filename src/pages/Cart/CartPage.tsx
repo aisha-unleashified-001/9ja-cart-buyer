@@ -76,6 +76,12 @@ const CartPage: React.FC = () => {
     highlightedProductIds.length > 0 &&
     (Boolean(deliveryValidation?.isMixedCart) || inferredMixed);
 
+  const heavyItems = useMemo(
+    () => items.filter((item) => (item.product.shipping.weight ?? 0) > 10),
+    [items]
+  );
+  const hasHeavyProduct = heavyItems.length > 0;
+
 
 
   const handleRemoveItem = async (productId: string) => {
@@ -269,6 +275,28 @@ const CartPage: React.FC = () => {
             team will contact you to confirm delivery arrangements and pricing.
             To continue with automated checkout, you can remove items from
             vendors outside Lagos.
+          </Alert>
+        )}
+
+        {hasHeavyProduct && (
+          <Alert
+            variant="destructive"
+            className="mb-6"
+          >
+            <p>
+              Products weighing above 10KG require manual delivery arrangements, as our current delivery partner cannot handle shipments exceeding this limit.
+            </p>
+            <ul className="mt-2 space-y-0.5 list-disc list-inside">
+              {heavyItems.map((item) => (
+                <li key={item.product.id}>
+                  <span className="font-medium">{item.product.name}</span>
+                  {' '}— {((item.product.shipping.weight ?? 0)).toFixed(2).replace(/\.00$/, '')}KG
+                </li>
+              ))}
+            </ul>
+            <p className="mt-2">
+              Kindly remove it from the cart or continue via manual delivery method.
+            </p>
           </Alert>
         )}
 

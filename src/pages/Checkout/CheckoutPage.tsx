@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from "react";
 import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import visaLogo from "@/assets/payment-logos/visa-logo.png";
 import mastercardLogo from "@/assets/payment-logos/mastercard-logo.png";
+import wakaLineLogoWhite from "@/assets/mywakawaka-logo-white.png";
 import {
   CreditCard,
   Truck,
@@ -342,6 +343,13 @@ const CheckoutPage: React.FC = () => {
       availableItems.filter((i) => !checkoutExcludedSet.has(i.product.id)),
     [availableItems, checkoutExcludedSet]
   );
+
+  const heavyCheckoutItems = useMemo(
+    () =>
+      itemsForCheckout.filter((item) => (item.product.shipping.weight ?? 0) > 10),
+    [itemsForCheckout]
+  );
+  const hasHeavyProductInCheckout = heavyCheckoutItems.length > 0;
 
   const cartSubtotal = useMemo(() => {
     return itemsForCheckout.reduce((acc, item) => {
@@ -1713,6 +1721,28 @@ const CheckoutPage: React.FC = () => {
               </Alert>
             )}
 
+            {hasHeavyProductInCheckout && (
+              <Alert
+                variant="destructive"
+                className="mb-4"
+              >
+                <p>
+                  Products weighing above 10KG require manual delivery arrangements, as our current delivery partner cannot handle shipments exceeding this limit.
+                </p>
+                <ul className="mt-2 space-y-0.5 list-disc list-inside">
+                  {heavyCheckoutItems.map((item) => (
+                    <li key={item.product.id}>
+                      <span className="font-medium">{item.product.name}</span>
+                      {' '}— {((item.product.shipping.weight ?? 0)).toFixed(2).replace(/\.00$/, '')}KG
+                    </li>
+                  ))}
+                </ul>
+                <p className="mt-2">
+                  Kindly remove it from the cart or continue via manual delivery method.
+                </p>
+              </Alert>
+            )}
+
             <OrderSummary
               items={itemsForCheckout}
               subtotal={cartSubtotal}
@@ -1745,9 +1775,13 @@ const CheckoutPage: React.FC = () => {
                         deliveryValidation.wakaLine.eta)) {
                       return (
                         <div className="rounded-lg border border-green-200 bg-green-50/80 p-4 space-y-1">
-                          <p className="text-sm font-semibold text-gray-900">
-                            {deliveryValidation.wakaLine.label ?? "Waka Line"}
-                          </p>
+                          <div className="inline-flex items-center bg-gray-900 rounded px-2 py-1">
+                            <img
+                              src={wakaLineLogoWhite}
+                              alt={deliveryValidation.wakaLine.label ?? "Waka Line"}
+                              className="h-6 object-contain"
+                            />
+                          </div>
                           {deliveryValidation.wakaLine.price !== undefined && (
                             <p className="text-sm text-gray-700">
                               Price: {formatPrice(deliveryValidation.wakaLine.price)}

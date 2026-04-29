@@ -186,6 +186,29 @@ export const mapApiProductToProduct = (apiProduct: ApiProductData): Product => {
     })
     .filter((s): s is string => s != null && s.length > 0);
 
+  // Extract weight from features array (e.g. { name: "Weight", value: "12000g" })
+  // Converts to KG: values ending in "g"/"gram(s)" are divided by 1000; "kg" used as-is.
+  const weightFeature = rawFeaturesInput.find((f: unknown) => {
+    if (f && typeof f === 'object' && 'name' in f) {
+      return String((f as { name?: string }).name ?? '').trim().toLowerCase() === 'weight';
+    }
+    return false;
+  }) as { name?: string; value?: string } | undefined;
+  let productWeight: number | undefined;
+  if (weightFeature?.value) {
+    const raw = String(weightFeature.value).trim().toLowerCase();
+    const numeric = parseFloat(raw);
+    if (!isNaN(numeric)) {
+      if (raw.endsWith('kg')) {
+        productWeight = numeric;
+      } else if (raw.endsWith('g')) {
+        productWeight = numeric / 1000;
+      } else {
+        productWeight = numeric;
+      }
+    }
+  }
+
   // Map raw variations (size, color, measurement, etc.) into typed variants
   const rawVariations = Array.isArray(apiProductUnknown.variations)
     ? (apiProductUnknown.variations as ApiProductVariation[])
@@ -278,7 +301,7 @@ export const mapApiProductToProduct = (apiProduct: ApiProductData): Product => {
     vendorLogo: parseVendorLogo(apiProduct.vendorLogo), // Parse and extract vendor logo URL
     isSubaccountSet: apiProduct.isSubaccountSet, // Preserve subaccount status
     shipping: {
-      weight: undefined,
+      weight: productWeight,
       dimensions: undefined,
       freeShipping: false, // Default value
       shippingClass: undefined,

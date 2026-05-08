@@ -11,9 +11,9 @@ export default function FastSelling() {
 
   const fastSellingProducts = products
     .filter((p) => p.flags?.bestseller)
-    .slice(0, 4);
+    .slice(0, 5);
   const displayProducts =
-    fastSellingProducts.length >= 4 ? fastSellingProducts : products.slice(0, 4);
+    fastSellingProducts.length >= 5 ? fastSellingProducts : products.slice(0, 5);
 
   if (loading) {
     return (
@@ -61,7 +61,7 @@ export default function FastSelling() {
         <div className="mb-8">
           <SectionHeader text="Featured Picks" subtitle="Handpicked products you don't want to miss" />
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-5 gap-3 sm:gap-4 lg:gap-6">
           {displayProducts.map((product) => (
             <ProductCard
               key={product.id}

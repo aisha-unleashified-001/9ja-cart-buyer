@@ -21,10 +21,12 @@ export interface RecentlyViewedProductsSectionProps {
   variant?: "inline" | "section";
   /** Extra class for the wrapper */
   className?: string;
+  /** Optional override for product grid layout classes */
+  gridClassName?: string;
 }
 
 const gridClass =
-  "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6";
+  "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-5 gap-3 sm:gap-4 lg:gap-6";
 
 /**
  * Recently Viewed Products section. Styled like Related Items.
@@ -43,6 +45,7 @@ const RecentlyViewedProductsSection: React.FC<
   showQuickAdd = true,
   variant = "inline",
   className,
+  gridClassName,
 }) => {
   const { products, loading, isAuthenticated } = useRecentlyViewedProducts({
     categoryId,
@@ -113,6 +116,8 @@ const RecentlyViewedProductsSection: React.FC<
     );
   };
 
+  const resolvedGridClass = gridClassName || gridClass;
+
   const sectionHeaderBlock = (
     <SectionHeader text="Recently Viewed" subtitle="Your recently viewed items are waiting" />
   );
@@ -137,7 +142,7 @@ const RecentlyViewedProductsSection: React.FC<
             renderEmptyOrAuthState()
           ) : products.length > 0 ? (
             <>
-              <div className={gridClass}>
+              <div className={resolvedGridClass}>
                 {products.map((product) => (
                   <ProductCard
                     key={product.id}
@@ -173,7 +178,7 @@ const RecentlyViewedProductsSection: React.FC<
       {loading && isAuthenticated ? (
         renderEmptyOrAuthState()
       ) : products.length > 0 ? (
-        <div className={gridClass}>
+        <div className={resolvedGridClass}>
           {products.map((product) => (
             <ProductCard
               key={product.id}

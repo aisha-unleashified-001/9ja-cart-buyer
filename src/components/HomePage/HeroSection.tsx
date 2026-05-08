@@ -3,6 +3,7 @@
 import React from "react";
 import CategoriesSidebar from "./CategoriesSidebar";
 import HeroCarousel, { type CarouselSlide } from "./HeroCarousel";
+import TopDealsPanel from "./TopDealsPanel";
 import { useAllRealCategories } from "../../hooks/api/useRealCategories";
 import { Loading } from "../UI";
 
@@ -41,7 +42,7 @@ const HeroSection: React.FC = () => {
 
   return (
     <div className="mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-4 lg:py-6">
-      <div className="grid grid-cols-1 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4 lg:gap-6 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4 lg:gap-6 items-start">
         {loading ? (
           <div className="hidden lg:block lg:col-span-1 border-r border-gray-200 pr-4 lg:pr-6">
             <div className="sticky top-4 flex items-center justify-center py-8">
@@ -58,6 +59,7 @@ const HeroSection: React.FC = () => {
           <CategoriesSidebar categories={categories} showBorderRight />
         )}
         <HeroCarousel slides={slides} />
+        <TopDealsPanel />
       </div>
     </div>
   );

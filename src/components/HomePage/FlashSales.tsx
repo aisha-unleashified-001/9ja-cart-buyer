@@ -69,7 +69,7 @@ export default function FlashSales() {
   }
 
   return (
-    <section className="py-8 sm:py-12 bg-gray-50">
+    <section id="flash-deals" className="py-8 sm:py-12 bg-gray-50">
       <div className="mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header Section */}
         <div className="mb-8">

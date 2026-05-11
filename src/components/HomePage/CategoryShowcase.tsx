@@ -1,87 +1,96 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
-import {
-  ChevronLeft,
-  ChevronRight,
-  Zap,
-  Baby,
-  Smartphone,
-  ShoppingCart,
-  Heart,
-  Shirt,
-  Wrench,
-  Phone,
-  Receipt,
-  Home,
-  Package,
-  Gamepad2,
-  Utensils,
-  Sparkles,
-  Monitor,
-} from "lucide-react";
+import { ChevronLeft, ChevronRight, type LucideIcon } from "lucide-react";
 
 import { Button, Alert } from "../UI";
 import SectionHeader from "../UI/SectionHeader";
 import { useAllRealCategories } from "../../hooks/api/useRealCategories";
 import type { Category } from "../../types";
+import { getCategoryIcon } from "@/lib/categoryIcons";
+import { cn } from "@/lib/utils";
 
-// Icon mapping for categories - enhanced for real API categories
-const getCategoryIcon = (categoryName: string, categoryId?: string) => {
-  const name = categoryName.toLowerCase();
-  
-  // First check by category ID (for services and known categories)
-  const idIconMap: Record<string, React.ComponentType<{ className?: string }>> = {
-    'services': Wrench,
-    'mobile-topup': Phone,
-    'bills': Receipt,
-  };
-  
-  if (categoryId && idIconMap[categoryId]) {
-    return idIconMap[categoryId];
-  }
-  
-  // Then check by category name keywords
-  const nameIconMap: Record<string, React.ComponentType<{ className?: string }>> = {
-    'toys': Gamepad2,
-    'games': Gamepad2,
-    'gaming': Gamepad2,
-    'home': Home,
-    'kitchen': Utensils,
-    'health': Heart,
-    'beauty': Sparkles,
-    'electronics': Monitor,
-    'gadgets': Smartphone,
-    'devices': Smartphone,
-    'men': Shirt,
-    'wear': Shirt,
-    'fashion': Shirt,
-    'clothing': Shirt,
-    'appliances': Zap,
-    'baby': Baby,
-    'groceries': ShoppingCart,
-    'food': ShoppingCart,
-  };
-  
-  // Find matching icon based on category name keywords
-  for (const [keyword, IconComponent] of Object.entries(nameIconMap)) {
-    if (name.includes(keyword)) {
-      return IconComponent;
-    }
-  }
-  
-  // Default fallback icon
-  return Package;
-};
+type ShowcaseCategory = Category & { icon: LucideIcon };
 
-// Transform categories to include icons
-const transformCategories = (categories: Category[]) => {
+// Icons stay available for sidebar + fallback when image is missing or fails to load.
+const transformCategories = (categories: Category[]): ShowcaseCategory[] => {
   return categories
-    .filter(cat => cat.level === 1 && !cat.archived) // Only show top-level categories that are not archived
+    .filter((cat) => cat.level === 1 && !cat.archived)
     .map((category) => ({
       ...category,
       icon: getCategoryIcon(category.name, category.id),
     }));
 };
+
+function ShopCategoryCard({
+  category,
+  linkClassName,
+  compact,
+}: {
+  category: ShowcaseCategory;
+  linkClassName?: string;
+  compact?: boolean;
+}) {
+  const [imgError, setImgError] = useState(false);
+  const Icon = category.icon;
+  const imageUrl = category.imageUrl?.trim();
+  const showImage = Boolean(imageUrl) && !imgError;
+
+  return (
+    <Link
+      to={`/category/${category.id}`}
+      state={{ categoryName: category.name }}
+      className={cn(
+        "group block rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
+        linkClassName
+      )}
+    >
+      <div
+        className={cn(
+          "flex flex-col overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm transition-all duration-300",
+          "group-hover:border-primary group-hover:shadow-md",
+          compact ? "h-40 w-[7.25rem]" : "h-48"
+        )}
+      >
+        <div
+          className={cn(
+            "relative w-full flex-1 bg-white",
+            compact ? "min-h-[5.5rem]" : "min-h-[7.5rem]"
+          )}
+        >
+          {showImage ? (
+            <img
+              src={imageUrl}
+              alt={category.name}
+              loading="lazy"
+              onError={() => setImgError(true)}
+              className="absolute inset-0 h-full w-full object-contain p-2 transition-transform duration-300 group-hover:scale-[1.03]"
+            />
+          ) : (
+            <div className="flex h-full items-center justify-center p-3">
+              <Icon
+                className={cn(
+                  "text-gray-500 transition-all duration-300 group-hover:text-primary group-hover:scale-110",
+                  compact ? "h-7 w-7" : "h-9 w-9"
+                )}
+                aria-hidden
+              />
+            </div>
+          )}
+        </div>
+        <div className="shrink-0 border-t border-gray-100 px-2 py-2.5">
+          <span
+            className={cn(
+              "block text-center font-medium leading-snug text-gray-900 line-clamp-2",
+              compact ? "text-xs" : "text-sm"
+            )}
+          >
+            {category.name}
+          </span>
+        </div>
+      </div>
+    </Link>
+  );
+}
 
 const CategoryShowcase: React.FC = () => {
   const { categories: rawCategories, loading, error, refetch } = useAllRealCategories();
@@ -118,7 +127,7 @@ const CategoryShowcase: React.FC = () => {
             {Array.from({ length: 6 }).map((_, index) => (
               <div
                 key={index}
-                className="h-32 rounded-lg border-2 border-gray-200 bg-gray-100 animate-pulse"
+                className="h-48 rounded-lg border border-gray-200 bg-gray-100 animate-pulse"
               />
             ))}
           </div>
@@ -204,92 +213,27 @@ const CategoryShowcase: React.FC = () => {
                 transform: `translateX(-${currentIndex * (100 / itemsPerView)}%)`,
               }}
             >
-              {categories.map((category) => {
-                const IconComponent = category.icon;
-                return (
-                  <Link
-                    key={category.id}
-                    to={`/category/${category.id}`}
-                    state={{ categoryName: category.name }}
-                    className="flex-shrink-0 w-[calc(100%/6-1rem)] group focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-lg"
-                  >
-                    <div
-                      className="
-                        relative p-6 rounded-lg border-2 transition-all duration-300 h-32 flex flex-col items-center justify-center
-                        bg-white border-gray-200
-                        group-hover:bg-primary group-hover:border-primary group-hover:shadow-lg
-                        group-focus-visible:bg-primary group-focus-visible:border-primary group-focus-visible:shadow-lg
-                        group-active:bg-primary/90 group-active:border-primary
-                      "
-                    >
-                      <IconComponent
-                        className="
-                          w-8 h-8 mb-3 transition-all duration-300 text-gray-600
-                          group-hover:text-white group-hover:scale-110
-                          group-focus-visible:text-white group-focus-visible:scale-110
-                          group-active:text-white
-                        "
-                      />
-                      <span
-                        className="
-                          text-sm font-medium text-center text-gray-900 transition-colors duration-300
-                          group-hover:text-white
-                          group-focus-visible:text-white
-                          group-active:text-white
-                        "
-                      >
-                        {category.name}
-                      </span>
-                    </div>
-                  </Link>
-                );
-              })}
+              {categories.map((category) => (
+                <ShopCategoryCard
+                  key={category.id}
+                  category={category}
+                  linkClassName="w-[calc(100%/6-1rem)] flex-shrink-0"
+                />
+              ))}
             </div>
           </div>
 
           {/* Mobile View - Horizontal Scroll */}
           <div className="sm:hidden">
             <div className="flex gap-3 overflow-x-auto pb-4 scrollbar-hide">
-              {categories.map((category) => {
-                const IconComponent = category.icon;
-                return (
-                  <Link
-                    key={category.id}
-                    to={`/category/${category.id}`}
-                    state={{ categoryName: category.name }}
-                    className="flex-shrink-0 group focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-lg"
-                  >
-                    <div
-                      className="
-                        relative p-4 rounded-lg border-2 transition-all duration-300 w-24 h-24 flex flex-col items-center justify-center
-                        bg-white border-gray-200
-                        group-hover:bg-primary group-hover:border-primary group-hover:shadow-lg
-                        group-focus-visible:bg-primary group-focus-visible:border-primary group-focus-visible:shadow-lg
-                        group-active:bg-primary/90 group-active:border-primary
-                      "
-                    >
-                      <IconComponent
-                        className="
-                          w-6 h-6 mb-1 transition-all duration-300 text-gray-600
-                          group-hover:text-white group-hover:scale-110
-                          group-focus-visible:text-white group-focus-visible:scale-110
-                          group-active:text-white
-                        "
-                      />
-                      <span
-                        className="
-                          text-xs font-medium text-center leading-tight text-gray-900 transition-colors duration-300
-                          group-hover:text-white
-                          group-focus-visible:text-white
-                          group-active:text-white
-                        "
-                      >
-                        {category.name}
-                      </span>
-                    </div>
-                  </Link>
-                );
-              })}
+              {categories.map((category) => (
+                <ShopCategoryCard
+                  key={category.id}
+                  category={category}
+                  linkClassName="flex-shrink-0"
+                  compact
+                />
+              ))}
             </div>
           </div>
         </div>

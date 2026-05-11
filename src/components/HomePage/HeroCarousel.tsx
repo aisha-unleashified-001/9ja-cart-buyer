@@ -17,7 +17,7 @@ interface HeroCarouselProps {
 
 const HeroCarousel: React.FC<HeroCarouselProps> = ({ 
   slides, 
-  height = 'h-[240px] sm:h-[300px] md:h-[360px] lg:h-[420px]' 
+  height = 'h-[240px] sm:h-[300px] md:h-[360px] lg:h-[460px]' 
 }) => {
   const [active, setActive] = useState(0);
   const touchStartX = useRef<number | null>(null);

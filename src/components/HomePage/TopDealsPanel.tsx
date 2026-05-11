@@ -1,15 +1,17 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import { Flame } from "lucide-react";
 import { useBuyerActiveProductsList } from "@/hooks/api/useRealProducts";
 import { normalizeProductImages } from "@/lib/utils";
 import { formatDiscountPercentage, formatPrice } from "@/lib/productUtils";
 import { Badge, Button } from "../UI";
 
+/** How often the featured deal cycles to the next product (ms). */
+const DEAL_ROTATE_MS = 3500;
+
 const TopDealsPanel: React.FC = () => {
   const { allProducts, loading } = useBuyerActiveProductsList({});
 
-  const firstFlashDeal = React.useMemo(() => {
+  const flashDeals = React.useMemo(() => {
     const flashSaleProducts = allProducts.filter((product) => {
       const price = typeof product.price === "object" ? product.price : null;
       if (!price) return false;
@@ -19,24 +21,40 @@ const TopDealsPanel: React.FC = () => {
       return hasDiscountBadge || hasPriceReduction;
     });
 
-    const uniqueFlashSaleProducts = Array.from(
+    return Array.from(
       new Map(flashSaleProducts.map((product) => [product.id, product])).values()
     );
-
-    return uniqueFlashSaleProducts[0];
   }, [allProducts]);
 
-  if (loading || !firstFlashDeal) {
+  const [dealIndex, setDealIndex] = React.useState(0);
+
+  React.useEffect(() => {
+    const n = flashDeals.length;
+    if (n === 0) return;
+    setDealIndex((i) => i % n);
+  }, [flashDeals.length]);
+
+  React.useEffect(() => {
+    if (flashDeals.length <= 1) return;
+    const id = window.setInterval(() => {
+      setDealIndex((i) => (i + 1) % flashDeals.length);
+    }, DEAL_ROTATE_MS);
+    return () => window.clearInterval(id);
+  }, [flashDeals.length]);
+
+  const activeDeal = flashDeals[dealIndex] ?? flashDeals[0];
+
+  if (loading || !activeDeal) {
     return (
       <aside className="hidden lg:block lg:col-span-1">
-        <div className="h-[420px] rounded-lg border border-gray-200 bg-white p-4">
+        <div className="h-[460px] rounded-lg border border-gray-200 bg-white p-4">
           <div className="h-full animate-pulse rounded-md bg-gray-100" />
         </div>
       </aside>
     );
   }
 
-  const product = normalizeProductImages(firstFlashDeal);
+  const product = normalizeProductImages(activeDeal);
   const currentPrice =
     typeof product.price === "number" ? product.price : product.price.current;
   const originalPrice =
@@ -46,13 +64,10 @@ const TopDealsPanel: React.FC = () => {
 
   return (
     <aside className="hidden lg:block lg:col-span-1">
-      <div className="h-[420px] rounded-lg border border-gray-200 bg-white p-4">
-        <div className="flex items-center gap-1.5">
-          <Flame className="h-4 w-4 text-orange-500" />
-          <p className="text-sm font-bold uppercase tracking-wide text-gray-800">
-            Top Deals Today
-          </p>
-        </div>
+      <div className="h-[460px] rounded-lg border border-gray-200 bg-white p-4">
+        <p className="text-sm font-bold uppercase tracking-wide text-gray-800">
+          Top Deals Today
+        </p>
         <div className="mt-3 grid grid-cols-3 gap-2 text-center">
           <div className="rounded-md bg-gray-50 py-2">
             <p className="text-base font-bold text-gray-900">08</p>
@@ -68,8 +83,8 @@ const TopDealsPanel: React.FC = () => {
           </div>
         </div>
 
-        <Link to={`/products/${product.id}`} className="mt-4 block">
-          <div className="rounded-lg border border-gray-100 p-3 transition-colors hover:border-primary/40">
+        <div className="mt-4 rounded-lg border border-gray-100 p-3 transition-colors hover:border-primary/40">
+          <Link to={`/products/${product.id}`} className="block">
             <div className="relative aspect-square overflow-hidden rounded-md bg-gray-50">
               {discount && discount.percentage > 0 && (
                 <Badge
@@ -99,14 +114,14 @@ const TopDealsPanel: React.FC = () => {
                 </span>
               )}
             </div>
-          </div>
-        </Link>
+          </Link>
 
-        <Link to="/products" className="mt-4 block">
-          <Button className="w-full bg-primary text-white hover:bg-primary/90">
-            Shop Now
-          </Button>
-        </Link>
+          <Link to="/products" className="mt-4 block">
+            <Button className="w-full border-0 bg-primary text-white hover:bg-primary/90">
+              Shop Now
+            </Button>
+          </Link>
+        </div>
       </div>
     </aside>
   );

@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Modal } from "../UI/Modal";
+import { getCategoryIcon } from "@/lib/categoryIcons";
 
 interface Category {
   id: string;
@@ -114,12 +115,13 @@ const CategoriesSidebar: React.FC<CategoriesSidebarProps> = ({ categories, showB
     const isExpanded = expandedCategories.has(category.id);
     const hasModalOptions =
       category.level === 2 && subcategoryOptions[category.id];
+    const CategoryIcon = getCategoryIcon(category.name, category.id);
 
     return (
       <li key={category.id}>
         <div
           className={`
-            group relative text-sm cursor-pointer flex items-center justify-between py-1.5 px-2 rounded-md
+            group relative text-sm cursor-pointer flex items-center justify-between gap-2 py-1.5 px-2 rounded-md
             transition-all duration-300 ease-in-out
             ${isSubcategory ? "ml-4 pl-4" : ""}
             text-gray-700 bg-transparent
@@ -135,8 +137,14 @@ const CategoriesSidebar: React.FC<CategoriesSidebarProps> = ({ categories, showB
             aria-hidden="true"
           />
           
-          <span className="font-medium relative z-10 transition-all duration-300 group-hover:translate-x-1">
-            {category.name}
+          <span className="flex min-w-0 flex-1 items-center gap-2 font-medium relative z-10 transition-all duration-300 group-hover:translate-x-1">
+            <CategoryIcon
+              className={`shrink-0 text-gray-400 transition-colors duration-300 group-hover:text-primary ${
+                isSubcategory ? "h-3.5 w-3.5" : "h-4 w-4"
+              } ${isExpanded ? "text-primary" : ""}`}
+              aria-hidden
+            />
+            <span className="truncate">{category.name}</span>
           </span>
           
           {hasSubcategories && (
@@ -171,7 +179,7 @@ const CategoriesSidebar: React.FC<CategoriesSidebarProps> = ({ categories, showB
       {/* Desktop Sidebar */}
       <aside className={`hidden lg:block lg:col-span-1 ${showBorderRight ? "border-r border-gray-200" : ""}`}>
         <div className="sticky top-4">
-          <div className="h-[240px] sm:h-[300px] md:h-[360px] lg:h-[420px] overflow-y-auto scroll-smooth scrollbar-thin">
+          <div className="h-[240px] sm:h-[300px] md:h-[360px] lg:h-[460px] overflow-y-auto scroll-smooth scrollbar-thin">
             <ul className="space-y-0.5 pr-4 lg:pr-6">
               {mainCategories.map((category) => renderCategoryItem(category))}
             </ul>

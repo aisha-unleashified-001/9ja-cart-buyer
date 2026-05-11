@@ -3,6 +3,7 @@ import { categoriesApi, type CategoriesListParams } from "../../api/categories";
 import {
   mapApiCategoriesToCategories,
   combineWithServicesCategories,
+  applyCategoryImageDefaults,
 } from "../../utils/category-mappers";
 import { apiErrorUtils } from "../../utils/api-errors";
 import {
@@ -121,9 +122,9 @@ function getMemoryCachedCategories(): Category[] | null {
 function initCategoriesFromStorage(): Category[] {
   // Use in-memory first (navigation back), then sessionStorage (reload)
   const mem = getMemoryCachedCategories();
-  if (mem) return mem;
+  if (mem) return applyCategoryImageDefaults(mem);
   const session = loadCategoriesFromSession();
-  if (session) return session.categories as Category[];
+  if (session) return applyCategoryImageDefaults(session.categories as Category[]);
   return [];
 }
 
@@ -144,7 +145,7 @@ export const useAllRealCategories = () => {
       await categoriesFetchPromise;
       const cached = getMemoryCachedCategories();
       if (cached) {
-        setCategories(cached);
+        setCategories(applyCategoryImageDefaults(cached));
         setLoading(false);
       }
       return;
@@ -153,7 +154,7 @@ export const useAllRealCategories = () => {
     // Already have fresh memory cache — sync this instance and skip fetch so first load shows immediately when cache exists.
     const cached = getMemoryCachedCategories();
     if (cached) {
-      setCategories(cached);
+      setCategories(applyCategoryImageDefaults(cached));
       setLoading(false);
       return;
     }

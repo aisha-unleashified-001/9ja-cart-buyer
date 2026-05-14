@@ -187,7 +187,7 @@ export const useAllRealCategories = () => {
     // Sync this instance from cache in case this is the only consumer (no re-render from the promise's setState yet).
     const afterCached = getMemoryCachedCategories();
     if (afterCached) {
-      setCategories(afterCached);
+      setCategories(applyCategoryImageDefaults(afterCached));
       setLoading(false);
     }
   }, [hasCached]);

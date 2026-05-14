@@ -46,6 +46,7 @@ import {
   expandCartItemsForValidateDelivery,
   inferMixedDeliveryCase,
 } from "../../api/order";
+import { useCheckoutCouponStore } from "../../store/useCheckoutCouponStore";
 import { apiErrorUtils } from "../../utils/api-errors";
 import { cn } from "../../lib/utils";
 import { formatPrice } from "../../lib/productUtils";
@@ -228,11 +229,18 @@ const CheckoutPage: React.FC = () => {
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const justSavedAddressRef = useRef(false);
 
-  // Coupon state
+  // Coupon state (persisted in session for cart ↔ checkout)
+  const appliedCoupon = useCheckoutCouponStore((s) => s.appliedCoupon);
+  const couponPricingSnapshot = useCheckoutCouponStore((s) => s.pricingSnapshot);
+  const setPersistedCoupon = useCheckoutCouponStore((s) => s.setPersistedCoupon);
+  const clearPersistedCoupon = useCheckoutCouponStore((s) => s.clearPersistedCoupon);
+
   const [couponCode, setCouponCode] = useState("");
-  const [appliedCoupon, setAppliedCoupon] = useState<string | null>(null);
-  const [couponDiscount, setCouponDiscount] = useState(0);
+  const couponDiscount = couponPricingSnapshot?.discountAmount ?? 0;
   const [couponError, setCouponError] = useState<string | null>(null);
+  const [isCouponApplying, setIsCouponApplying] = useState(false);
+  const [isCouponRemoving, setIsCouponRemoving] = useState(false);
+  const couponHydrateAttemptedRef = useRef<string | null>(null);
 
   /** Product IDs excluded from this checkout only (remain in cart). */
   const [checkoutExcludedProductIds, setCheckoutExcludedProductIds] = useState<
@@ -330,8 +338,9 @@ const CheckoutPage: React.FC = () => {
     // },
   ];
 
-  // Use filtered values from cart (already exclude unavailable products)
-  const discount = couponDiscount;
+  // Use filtered values from cart (already exclude unavailable products).
+  // When `couponPricingSnapshot` is set, discount is already reflected in `payableSubtotal` (API `cartSummary.total`).
+  const summaryDiscount = couponPricingSnapshot ? 0 : couponDiscount;
 
   const checkoutExcludedSet = useMemo(
     () => new Set(checkoutExcludedProductIds),
@@ -360,6 +369,9 @@ const CheckoutPage: React.FC = () => {
       return acc + price * item.quantity;
     }, 0);
   }, [itemsForCheckout]);
+
+  const merchandiseSubtotal =
+    couponPricingSnapshot?.payableSubtotal ?? cartSubtotal;
 
   const buyerAddressForDelivery = useMemo(
     () => buildBuyerAddressLine(billingDetails, selectedAddress),
@@ -426,7 +438,19 @@ const CheckoutPage: React.FC = () => {
     return cartShipping;
   }, [deliveryValidation?.scenario, deliveryValidation?.automatedDeliveryFee, showAutomatedDeliveryUi, cartShipping]);
 
-  const total = cartSubtotal + shipping + flatRate - discount;
+  const total = merchandiseSubtotal + shipping + flatRate - summaryDiscount;
+
+  useEffect(() => {
+    if (!appliedCoupon || !couponPricingSnapshot) return;
+    const drift = Math.abs(
+      cartSubtotal - couponPricingSnapshot.preDiscountSubtotal
+    );
+    if (drift <= 1) return;
+    clearPersistedCoupon();
+    setCouponError(
+      "Cart changed — please re-apply your coupon if you still want the discount."
+    );
+  }, [appliedCoupon, couponPricingSnapshot, cartSubtotal, clearPersistedCoupon]);
 
   const hideManualDeliveryUi =
     checkoutExcludedProductIds.length > 0 && !showMixedCartBanner;
@@ -541,42 +565,6 @@ const CheckoutPage: React.FC = () => {
     }
   };
 
-  // Coupon handling functions
-  const handleApplyCoupon = () => {
-    if (!couponCode.trim()) {
-      setCouponError("Please enter a coupon code");
-      return;
-    }
-
-    setCouponError(null);
-
-    // Mock coupon validation - replace with real API call
-    const mockCoupons: Record<string, number> = {
-      SAVE1000: 1000,
-      DISCOUNT500: 500,
-      WELCOME200: 200,
-    };
-
-    const discount = mockCoupons[couponCode.toUpperCase()];
-
-    if (discount) {
-      setAppliedCoupon(couponCode.toUpperCase());
-      setCouponDiscount(discount);
-      setCouponError(null);
-    } else {
-      setCouponError("Invalid coupon code");
-      setAppliedCoupon(null);
-      setCouponDiscount(0);
-    }
-  };
-
-  const handleRemoveCoupon = () => {
-    setAppliedCoupon(null);
-    setCouponDiscount(0);
-    setCouponCode("");
-    setCouponError(null);
-  };
-
   const handleInputChange = (
     field: keyof BillingDetailsForm,
     value: string
@@ -602,6 +590,93 @@ const CheckoutPage: React.FC = () => {
   };
 
   const isGuestCheckoutFlow = !isAuthenticated && checkoutAsGuest;
+
+  const handleApplyCoupon = async () => {
+    const trimmed = couponCode.trim();
+    if (!trimmed) {
+      setCouponError("Please enter a coupon code");
+      return;
+    }
+
+    setCouponError(null);
+
+    if (isGuestCheckoutFlow) {
+      setPersistedCoupon(trimmed, null);
+      return;
+    }
+
+    setIsCouponApplying(true);
+    try {
+      const snapshot = await orderApi.applyCoupon(trimmed);
+      setPersistedCoupon(trimmed, snapshot);
+    } catch (e) {
+      clearPersistedCoupon();
+      setCouponError(apiErrorUtils.getErrorMessage(e));
+    } finally {
+      setIsCouponApplying(false);
+    }
+  };
+
+  const handleRemoveCoupon = async () => {
+    if (isGuestCheckoutFlow) {
+      clearPersistedCoupon();
+      setCouponCode("");
+      setCouponError(null);
+      return;
+    }
+
+    setIsCouponRemoving(true);
+    setCouponError(null);
+    try {
+      await orderApi.removeCoupon();
+      clearPersistedCoupon();
+      setCouponCode("");
+    } catch (e) {
+      setCouponError(apiErrorUtils.getErrorMessage(e));
+    } finally {
+      setIsCouponRemoving(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!appliedCoupon) {
+      couponHydrateAttemptedRef.current = null;
+    }
+  }, [appliedCoupon]);
+
+  useEffect(() => {
+    if (!isAuthenticated || isGuestCheckoutFlow) return;
+    if (!appliedCoupon || couponPricingSnapshot) return;
+    if (availableItems.length === 0) return;
+    if (couponHydrateAttemptedRef.current === appliedCoupon) return;
+    couponHydrateAttemptedRef.current = appliedCoupon;
+
+    let cancelled = false;
+    void (async () => {
+      try {
+        const snapshot = await orderApi.applyCoupon(appliedCoupon);
+        if (cancelled) return;
+        setPersistedCoupon(appliedCoupon, snapshot);
+      } catch {
+        if (!cancelled) {
+          clearPersistedCoupon();
+          couponHydrateAttemptedRef.current = null;
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    isAuthenticated,
+    isGuestCheckoutFlow,
+    appliedCoupon,
+    couponPricingSnapshot,
+    availableItems.length,
+    setPersistedCoupon,
+    clearPersistedCoupon,
+  ]);
 
   useEffect(() => {
     if (selectedPayment !== "buy-now-pay-later") {
@@ -1745,12 +1820,12 @@ const CheckoutPage: React.FC = () => {
 
             <OrderSummary
               items={itemsForCheckout}
-              subtotal={cartSubtotal}
+              subtotal={merchandiseSubtotal}
               shipping={shipping}
               showShipping={Boolean(deliveryValidation) && showAutomatedDeliveryUi}
               flatRate={flatRate}
               tax={0}
-              discount={discount}
+              discount={summaryDiscount}
               total={total}
               appliedCoupon={appliedCoupon}
               showTitle={false}
@@ -1870,17 +1945,20 @@ const CheckoutPage: React.FC = () => {
                       <span className="text-sm font-medium text-green-800">
                         Coupon "{appliedCoupon}" applied
                       </span>
-                      <span className="text-sm text-green-600">
-                        (-{formatPrice(couponDiscount)})
-                      </span>
+                      {couponDiscount > 0 && (
+                        <span className="text-sm text-green-600">
+                          (-{formatPrice(couponDiscount)})
+                        </span>
+                      )}
                     </div>
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={handleRemoveCoupon}
+                      onClick={() => void handleRemoveCoupon()}
+                      disabled={isCouponRemoving}
                       className="text-red-600 hover:text-red-700 hover:bg-red-50"
                     >
-                      Remove
+                      {isCouponRemoving ? "Removing…" : "Remove"}
                     </Button>
                   </div>
                 ) : (
@@ -1889,20 +1967,24 @@ const CheckoutPage: React.FC = () => {
                       <Input
                         placeholder="Enter coupon code"
                         value={couponCode}
-                        onChange={(e) =>
-                          setCouponCode(e.target.value.toUpperCase())
-                        }
+                        onChange={(e) => {
+                          setCouponCode(e.target.value);
+                          if (couponError) setCouponError(null);
+                        }}
                         className="flex-1"
-                        onKeyPress={(e) =>
-                          e.key === "Enter" && handleApplyCoupon()
-                        }
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            void handleApplyCoupon();
+                          }
+                        }}
                       />
                       <Button
                         variant="outline"
-                        onClick={handleApplyCoupon}
-                        disabled={!couponCode.trim()}
+                        onClick={() => void handleApplyCoupon()}
+                        disabled={!couponCode.trim() || isCouponApplying}
                       >
-                        Apply
+                        {isCouponApplying ? "Applying…" : "Apply"}
                       </Button>
                     </div>
 
@@ -1913,9 +1995,12 @@ const CheckoutPage: React.FC = () => {
                       </div>
                     )}
 
-                    <p className="text-xs text-muted-foreground">
-                      Try: SAVE1000, DISCOUNT500, WELCOME200
-                    </p>
+                    {isGuestCheckoutFlow && (
+                      <p className="text-xs text-muted-foreground">
+                        Guest checkout: your code is sent with the order. Sign in
+                        to validate coupons against your cart first.
+                      </p>
+                    )}
                   </div>
                 )}
               </CardContent>

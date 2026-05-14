@@ -8,6 +8,7 @@ import { useAllRealCategories } from "../../hooks/api/useRealCategories";
 import type { Category } from "../../types";
 import { getCategoryIcon } from "@/lib/categoryIcons";
 import { cn } from "@/lib/utils";
+import { getDefaultCategoryImage } from "@/utils/category-mappers";
 
 type ShowcaseCategory = Category & { icon: LucideIcon };
 
@@ -32,7 +33,8 @@ function ShopCategoryCard({
 }) {
   const [imgError, setImgError] = useState(false);
   const Icon = category.icon;
-  const imageUrl = category.imageUrl?.trim();
+  const imageUrl =
+    category.imageUrl?.trim() || getDefaultCategoryImage(category.name);
   const showImage = Boolean(imageUrl) && !imgError;
 
   return (

@@ -584,6 +584,81 @@ export interface OrdersListApiResponse {
   [key: string]: any;
 }
 
+/** `data.cartSummary` from POST /order/apply-coupon (field names per backend). */
+export interface ApplyCouponCartSummary {
+  totalItems?: number;
+  totalQuantity?: number;
+  subtotal: number;
+  discount: number;
+  tax?: number;
+  shipping?: number;
+  total: number;
+}
+
+/**
+ * Normalized pricing from apply-coupon. Backend uses `cartSummary.total` as the
+ * post-discount merchandise total; that value is what checkout shows as "Subtotal".
+ */
+export interface CouponPricingSnapshot {
+  payableSubtotal: number;
+  discountAmount: number;
+  preDiscountSubtotal: number;
+}
+
+function numFromUnknown(v: unknown): number | undefined {
+  if (typeof v === "number" && Number.isFinite(v)) return v;
+  if (typeof v === "string") {
+    const n = parseFloat(v.replace(/[^0-9.-]/g, ""));
+    if (Number.isFinite(n)) return n;
+  }
+  return undefined;
+}
+
+/**
+ * Extracts cart totals from apply-coupon JSON. Returns null when `cartSummary` is missing.
+ */
+export function parseApplyCouponResponse(payload: unknown): CouponPricingSnapshot | null {
+  const root = payload !== null && typeof payload === "object" && !Array.isArray(payload)
+    ? (payload as Record<string, unknown>)
+    : null;
+  if (!root) return null;
+
+  const dataRaw = root.data;
+  const data =
+    dataRaw !== null && typeof dataRaw === "object" && !Array.isArray(dataRaw)
+      ? (dataRaw as Record<string, unknown>)
+      : root;
+
+  const csRaw = data.cartSummary;
+  if (!csRaw || typeof csRaw !== "object" || Array.isArray(csRaw)) return null;
+  const cs = csRaw as Record<string, unknown>;
+
+  const total = numFromUnknown(cs.total);
+  if (total === undefined) return null;
+
+  const subtotal = numFromUnknown(cs.subtotal);
+  const discountField = numFromUnknown(cs.discount) ?? 0;
+
+  const couponRaw = data.coupon;
+  const coupon =
+    couponRaw !== null && typeof couponRaw === "object" && !Array.isArray(couponRaw)
+      ? (couponRaw as Record<string, unknown>)
+      : null;
+  const discountFromCoupon = coupon ? numFromUnknown(coupon.discountAmount) : undefined;
+
+  const discountAmount =
+    discountField > 0 ? discountField : discountFromCoupon ?? 0;
+
+  const preDiscountSubtotal =
+    subtotal !== undefined ? subtotal : total + discountAmount;
+
+  return {
+    payableSubtotal: total,
+    discountAmount,
+    preDiscountSubtotal,
+  };
+}
+
 // Order API endpoints
 export const orderApi = {
   // Place order (authenticated) — backend uses Basic auth; guestCheckout must be 0.
@@ -639,6 +714,26 @@ export const orderApi = {
 
     inFlightValidateDeliveryRequests.set(key, req);
     return req;
+  },
+
+  /**
+   * Apply a coupon to the current cart/order context (Bearer). Success is HTTP 2xx; response body may be empty.
+   */
+  applyCoupon: async (couponCode: string): Promise<CouponPricingSnapshot | null> => {
+    const raw = await apiClient.post<unknown>(
+      "/order/apply-coupon",
+      { couponCode: couponCode.trim() },
+      undefined,
+      true
+    );
+    return parseApplyCouponResponse(raw);
+  },
+
+  /**
+   * Remove the applied coupon (Bearer). Response body may be empty.
+   */
+  removeCoupon: async (): Promise<void> => {
+    await apiClient.delete<unknown>("/order/remove-coupon", undefined, true);
   },
   
   // Get order details (requires Bearer token)

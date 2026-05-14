@@ -28,10 +28,12 @@ function normalizeCategoryLabel(name: string): string {
 }
 
 // Curated Unsplash assets (path after images.unsplash.com/) — distinct subjects per rule set.
+// IDs are checked against images.unsplash.com (imgix); several older ids were retired (404).
 const CAT_IMG = {
   phones: 'photo-1511707171634-5f897ff02aa9',
   laptopTech: 'photo-1496181133206-80ce9b88a853',
-  tvAudio: 'photo-1593359677879-e3615ed8fcea',
+  /** Living room with television on wall */
+  tvAudio: 'photo-1649977107006-b769969c9725',
   headphones: 'photo-1505740420928-5e560c06d30e',
   beauty: 'photo-1596462502278-27bfdc403348',
   hair: 'photo-1522338242992-e1a54906a8da',
@@ -39,22 +41,22 @@ const CAT_IMG = {
   shoes: 'photo-1542291026-7eec264c27ff',
   baby: 'photo-1515488042361-ee00e0ddd4e4',
   groceries: 'photo-1542838132-92c53300491e',
-  pets: 'photo-1450778869180-41aaf06085b6',
-  toys: 'photo-1558060370-13524fbce593',
+  pets: 'photo-1583511655857-d19b40a7a54e',
+  toys: 'photo-1587654780291-39c9404d746b',
   furniture: 'photo-1555041469-a586c61ea9bc',
   home: 'photo-1586023492125-27b2c045efd7',
   kitchen: 'photo-1556911220-bff31c812dba',
-  office: 'photo-1524758631624-e2822e584c01',
-  watch: 'photo-1524592094714-0f065f8b4638',
-  fragrance: 'photo-1541643600911-758d62a966cb',
+  office: 'photo-1497366216548-37526070297c',
+  watch: 'photo-1524805444758-089113d48a6d',
+  fragrance: 'photo-1592945403244-b3fbafd7f539',
   sports: 'photo-1571902943202-507ec2618e8f',
-  books: 'photo-1524993602760-ecd993f36353',
-  garden: 'photo-1416879595882-3373a0480a5f',
+  books: 'photo-1481627834876-b7833e8f5570',
+  garden: 'photo-1464226184884-fa280b87c399',
   automotive: 'photo-1489824904134-891ab64532f1',
-  jewellery: 'photo-1535632066927-ab7c9d609a01',
-  /** Bold patterned fabrics — African prints / ankara */
-  africanPrints: 'photo-1616423664072-cfebddd1d337',
-  default: 'photo-1607082349446-86a205291afb',
+  jewellery: 'photo-1612817288484-6f916006741a',
+  /** Woman in vibrant traditional Ankara print (Nigeria) */
+  africanPrints: 'photo-1760907949889-eb62b7fd9f75',
+  default: 'photo-1556742049-0cfed4f6a45d',
 } as const;
 
 type Rule = { keywords: string[]; photo: string };
@@ -195,7 +197,11 @@ const CATEGORY_IMAGE_RULES: Rule[] = [
   { keywords: ['airtime', 'top up', 'topup', 'data bundle'], photo: CAT_IMG.phones },
 ];
 
-const getDefaultCategoryImage = (categoryName: string): string => {
+/** Resolved stock image for a category display name (exact map → keyword rules → default). */
+export function getDefaultCategoryImage(categoryName: string): string {
+  if (!categoryName?.trim()) {
+    return categoryStockImage(CAT_IMG.default);
+  }
   const normalized = normalizeCategoryLabel(categoryName);
   const exact = EXACT_CATEGORY_IMAGE_URL[normalized];
   if (exact) return exact;
@@ -209,7 +215,7 @@ const getDefaultCategoryImage = (categoryName: string): string => {
   }
 
   return categoryStockImage(CAT_IMG.default);
-};
+}
 
 /**
  * Re-applies {@link getDefaultCategoryImage} for every category (name → imageUrl).

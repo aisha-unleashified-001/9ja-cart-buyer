@@ -6,6 +6,7 @@ import { productsApi } from '../api/products';
 import { apiErrorUtils } from '../utils/api-errors';
 import { ApiError } from '../api/client';
 import { mapApiProductToProduct } from '../utils/product-mappers';
+import { useCheckoutCouponStore } from './useCheckoutCouponStore';
 
 /** Flat rate fee in naira applied to every order (e.g. handling/delivery) */
 export const FLAT_RATE_NGN = 750;
@@ -355,6 +356,7 @@ export const useCartStore = create<CartStore>()(
         set({ isLoading: true });
         await cartApi.clearCart();
         set({ serverItems: [], serverSummary: null });
+        useCheckoutCouponStore.getState().clearPersistedCoupon();
       } catch (error) {
         const errorMessage = apiErrorUtils.getErrorMessage(error);
         set({ error: errorMessage });
@@ -365,6 +367,7 @@ export const useCartStore = create<CartStore>()(
     } else {
       // Guest: Clear in-memory state only
       set({ guestItems: [] });
+      useCheckoutCouponStore.getState().clearPersistedCoupon();
     }
   },
 
@@ -668,6 +671,7 @@ export const useCartStore = create<CartStore>()(
 
   // Handle logout - clear server data, keep guest cart empty
   handleLogout: () => {
+    useCheckoutCouponStore.getState().clearPersistedCoupon();
     set({
       serverItems: [],
       serverSummary: null,

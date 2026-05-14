@@ -287,10 +287,10 @@ const ProductDetailPage: React.FC = () => {
         <Breadcrumb items={breadcrumbItems} className="mb-6" />
 
         <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 mb-8">
-          <div className="xl:col-span-7">
+          <div className="xl:col-span-6">
             <div className="grid grid-cols-1 md:grid-cols-[88px_1fr] gap-4">
               <div className="order-2 md:order-1">
-                <div className="flex md:flex-col gap-2 overflow-x-auto md:overflow-y-auto md:max-h-[520px]">
+                <div className="flex md:flex-col gap-2 overflow-x-auto md:overflow-y-auto md:max-h-[580px]">
                   {imageGallery.map((image, index) => (
                     <button
                       key={index}
@@ -313,7 +313,7 @@ const ProductDetailPage: React.FC = () => {
                 </div>
               </div>
 
-              <div className="order-1 md:order-2 aspect-square w-full bg-white rounded-lg border overflow-hidden relative">
+              <div className="order-1 md:order-2 aspect-square w-full max-w-[min(100%,580px)] md:max-w-[580px] bg-white rounded-lg border overflow-hidden relative">
                 {discount && (
                   <Badge className="absolute top-3 right-3 z-10 bg-primary text-white">
                     -{formatDiscountPercentage(discount.percentage)}%
@@ -331,8 +331,8 @@ const ProductDetailPage: React.FC = () => {
             </div>
           </div>
 
-          <div className="xl:col-span-3">
-            <Card className="h-full">
+          <div className="xl:col-span-4">
+            <Card className="h-full border-0 shadow-none">
               <CardContent className="p-5 space-y-5">
                 <div>
                   <h1 className="text-2xl font-bold text-gray-900">{product.name}</h1>
@@ -548,8 +548,8 @@ const ProductDetailPage: React.FC = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
-          <div className="lg:col-span-2 space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+          <div className="space-y-6 min-w-0">
             <Card>
               <CardContent className="p-0">
                 <div className="border-b border-gray-200">
@@ -727,7 +727,7 @@ const ProductDetailPage: React.FC = () => {
             </Card>
           </div>
 
-          <div>
+          <div className="min-w-0">
             {filteredRelatedProducts.length > 0 && (
               <Card>
                 <CardContent className="p-4">
@@ -737,13 +737,13 @@ const ProductDetailPage: React.FC = () => {
                       View all
                     </Link>
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    {filteredRelatedProducts.slice(0, 2).map((relatedProduct) => (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                    {filteredRelatedProducts.slice(0, 8).map((relatedProduct) => (
                       <ProductCard
                         key={relatedProduct.id}
                         product={normalizeProductImages(relatedProduct)}
                         showQuickAdd
-                        className="group cursor-pointer"
+                        className="group cursor-pointer w-full"
                       />
                     ))}
                   </div>
@@ -751,17 +751,14 @@ const ProductDetailPage: React.FC = () => {
               </Card>
             )}
           </div>
-
-          <div>
-            <RecentlyViewedProductsSection
-              variant="inline"
-              limit={2}
-              gridClassName="grid grid-cols-2 gap-3"
-              className="!mt-0 pt-0 border-0 rounded-lg border bg-white p-4 space-y-3"
-              showQuickAdd
-            />
-          </div>
         </div>
+
+        <RecentlyViewedProductsSection
+          variant="inline"
+          limit={5}
+          showQuickAdd
+          className="mt-6 pt-6 rounded-lg border border-gray-200 bg-white p-4 sm:p-6 space-y-4"
+        />
 
         <section className="mt-8 mb-4 rounded-lg border bg-white px-4 py-4">
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">

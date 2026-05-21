@@ -41,16 +41,16 @@ const HeroSection: React.FC = () => {
   const { categories, loading, error } = useAllRealCategories();
 
   return (
-    <div className="mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-4 lg:py-6">
+    <div className="mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-4 lg:pb-6 lg:pt-4">
       <div className="grid grid-cols-1 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4 lg:gap-6 items-start">
         {loading ? (
-          <div className="hidden lg:block lg:col-span-1 border-r border-gray-200 pr-4 lg:pr-6">
+          <div className="hidden lg:block lg:col-span-1 relative -mt-4 border-r border-gray-200 pt-4 pr-4 lg:pr-6">
             <div className="sticky top-4 flex items-center justify-center py-8">
               <Loading size="sm" />
             </div>
           </div>
         ) : error ? (
-          <div className="hidden lg:block lg:col-span-1 border-r border-gray-200 pr-4 lg:pr-6">
+          <div className="hidden lg:block lg:col-span-1 relative -mt-4 border-r border-gray-200 pt-4 pr-4 lg:pr-6">
             <div className="sticky top-4 text-center py-8">
               <p className="text-sm text-gray-500">Categories unavailable</p>
             </div>

@@ -148,13 +148,13 @@ const NewHeader: React.FC = () => {
     // <header className="fixed top-0 left-0 w-full z-50 bg-[#182F38]/95 backdrop-blur-md text-white shadow-lg border-b border-gray-700">
     <header className=" sticky top-0 z-50 bg-[#182F38]/95 backdrop-blur-md text-white shadow-lg border-b border-gray-700">
       {/* Main Header */}
-      <div className=" px-2 sm:px-4 py-2 sm:py-3">
-        <div className="max-w-[960px] lg:max-w-7xl 2xl:max-w-[1550px] mx-auto">
+      <div className="py-2 sm:py-3">
+        <div className="mx-auto w-full max-w-[960px] px-4 sm:px-6 lg:max-w-7xl lg:px-8 2xl:max-w-[1550px]">
           {/* Top row for mobile - Logo and essential actions */}
           <div className="flex items-center justify-between gap-2 sm:gap-4 lg:hidden mb-2">
             {/* Mobile Menu Button */}
             <button
-              className="p-2 text-white hover:bg-white/10 rounded-md transition-colors flex-shrink-0 min-h-[44px] min-w-[44px] flex items-center justify-center"
+              className="p-2 text-white hover:bg-[#8DEB6E]/15 rounded-md transition-colors flex-shrink-0 min-h-[44px] min-w-[44px] flex items-center justify-center"
               onClick={(e) => {
                 e.stopPropagation();
                 setShowMobileMenu(!showMobileMenu);
@@ -178,7 +178,7 @@ const NewHeader: React.FC = () => {
               {isAuthenticated ? (
                 <div className="relative" ref={accountMenuRef}>
                   <button
-                    className="p-2 text-white hover:bg-white/10 rounded-md transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
+                    className="p-2 text-white hover:bg-[#8DEB6E]/15 rounded-md transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
                     onClick={handleAccountMenuClick}
                   >
                     <User className="w-5 h-5" />
@@ -247,7 +247,7 @@ const NewHeader: React.FC = () => {
               ) : (
                 <Link
                   to="/auth/login"
-                  className="p-2 text-white hover:bg-white/10 rounded-md transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
+                  className="p-2 text-white hover:bg-[#8DEB6E]/15 rounded-md transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
                 >
                   <User className="w-5 h-5" />
                 </Link>
@@ -256,11 +256,11 @@ const NewHeader: React.FC = () => {
               {/* Cart - Mobile */}
               <Link
                 to="/cart"
-                className="p-2 text-white hover:bg-white/10 rounded-md transition-colors relative min-h-[44px] min-w-[44px] flex items-center justify-center"
+                className="p-2 text-white hover:bg-[#8DEB6E]/15 rounded-md transition-colors relative min-h-[44px] min-w-[44px] flex items-center justify-center"
               >
                 <ShoppingCart className="w-5 h-5" />
                 {totalItems > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
+                  <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-[#2ac12a] text-[10px] font-bold text-white">
                     {totalItems > 9 ? "9+" : totalItems}
                   </span>
                 )}
@@ -276,7 +276,7 @@ const NewHeader: React.FC = () => {
             </Link>
 
             {/* Delivery Location */}
-            <button className="flex items-center text-sm hover:bg-white/10 px-3 py-2 rounded-md cursor-pointer transition-colors flex-shrink-0">
+            <button className="flex items-center text-sm hover:bg-[#8DEB6E]/15 px-3 py-2 rounded-md cursor-pointer transition-colors flex-shrink-0">
               <MapPin className="w-6 h-6 mr-2 text-white" />
               <div className="text-white">
                 <div className="text-xs">Deliver to</div>
@@ -325,7 +325,7 @@ const NewHeader: React.FC = () => {
             {/* Right Side Items */}
             <div className="flex items-center gap-2 flex-shrink-0">
               {/* ARCHIVED: Language Selector - commented out until language switching is supported */}
-              {/* <button className="flex text-white items-center text-sm hover:bg-white/10 px-3 py-2 rounded-md cursor-pointer transition-colors">
+              {/* <button className="flex text-white items-center text-sm hover:bg-[#8DEB6E]/15 px-3 py-2 rounded-md cursor-pointer transition-colors">
                 <Globe className="w-4 h-4 mr-2" />
                 <span>EN</span>
                 <ChevronDown className="w-3 h-3 ml-1" />
@@ -334,7 +334,7 @@ const NewHeader: React.FC = () => {
               {/* Help - Direct Link */}
               <Link
                 to="/contact-admin"
-                className="flex text-white items-center text-sm hover:bg-white/10 px-3 py-2 rounded-md cursor-pointer transition-colors"
+                className="flex text-white items-center text-sm hover:bg-[#8DEB6E]/15 px-3 py-2 rounded-md cursor-pointer transition-colors"
               >
                 <HelpCircle className="w-4 h-4 mr-2" />
                 <span>Help</span>
@@ -344,7 +344,7 @@ const NewHeader: React.FC = () => {
               {isAuthenticated ? (
                 <div className="relative" ref={accountMenuRef}>
                   <button
-                    className="flex items-center text-sm text-white hover:text-white/80 hover:bg-white/5 px-3 py-2 rounded-md transition-colors"
+                    className="flex items-center text-sm text-white hover:text-white/80 hover:bg-[#8DEB6E]/15 px-3 py-2 rounded-md transition-colors"
                     onClick={handleAccountMenuClick}
                   >
                     <div className="flex items-center">
@@ -417,7 +417,7 @@ const NewHeader: React.FC = () => {
               ) : (
                 <Link
                   to="/auth/login"
-                  className="flex items-center text-sm text-white hover:text-white/80 hover:bg-white/5 px-3 py-2 rounded-md transition-colors"
+                  className="flex items-center text-sm text-white hover:text-white/80 hover:bg-[#8DEB6E]/15 px-3 py-2 rounded-md transition-colors"
                 >
                   <User className="w-5 h-5 mr-2" />
                   <span>Hello, Sign in</span>
@@ -428,7 +428,7 @@ const NewHeader: React.FC = () => {
               {isAuthenticated && (
                 <Link
                   to="/orders"
-                  className="flex items-center text-sm text-white hover:bg-white/10 hover:text-white px-3 py-2 rounded-md transition-colors"
+                  className="flex items-center text-sm text-white hover:bg-[#8DEB6E]/15 hover:text-white px-3 py-2 rounded-md transition-colors"
                 >
                   <div className="text-left">
                     <div className="text-xs">Returns</div>
@@ -440,11 +440,11 @@ const NewHeader: React.FC = () => {
               {/* Cart */}
               <Link
                 to="/cart"
-                className="flex items-center text-white hover:bg-white/10 px-3 py-2 rounded-md transition-colors relative"
+                className="flex items-center text-white hover:bg-[#8DEB6E]/15 px-3 py-2 rounded-md transition-colors relative"
               >
                 <ShoppingCart className="w-6 h-6" />
                 {totalItems > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
+                  <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-[#2ac12a] text-[10px] font-bold text-white">
                     {totalItems > 99 ? "99+" : totalItems}
                   </span>
                 )}
@@ -522,7 +522,7 @@ const NewHeader: React.FC = () => {
               {/* ARCHIVED: Services link - commented out
               <Link
                 to="/services"
-                className="block py-3 hover:text-primary transition-colors min-h-[44px] flex items-center"
+                className="block rounded-md px-2 py-3 transition-colors hover:bg-[#8DEB6E]/15 hover:text-white min-h-[44px] flex items-center"
                 onClick={() => setShowMobileMenu(false)}
               >
                 Services
@@ -530,21 +530,21 @@ const NewHeader: React.FC = () => {
               */}
               <Link
                 to="/products"
-                className="block py-3 hover:text-primary transition-colors min-h-[44px] flex items-center"
+                className="block rounded-md px-2 py-3 transition-colors hover:bg-[#8DEB6E]/15 hover:text-white min-h-[44px] flex items-center"
                 onClick={() => setShowMobileMenu(false)}
               >
                 All Products
               </Link>
               <Link
                 to="/products"
-                className="block py-3 hover:text-primary transition-colors min-h-[44px] flex items-center"
+                className="block rounded-md px-2 py-3 transition-colors hover:bg-[#8DEB6E]/15 hover:text-white min-h-[44px] flex items-center"
                 onClick={() => setShowMobileMenu(false)}
               >
                 Categories
               </Link>
               <Link
                 to="/contact"
-                className="block py-3 hover:text-primary transition-colors min-h-[44px] flex items-center"
+                className="block rounded-md px-2 py-3 transition-colors hover:bg-[#8DEB6E]/15 hover:text-white min-h-[44px] flex items-center"
                 onClick={() => setShowMobileMenu(false)}
               >
                 Customer Service

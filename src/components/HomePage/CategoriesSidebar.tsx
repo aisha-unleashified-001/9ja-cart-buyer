@@ -177,9 +177,21 @@ const CategoriesSidebar: React.FC<CategoriesSidebarProps> = ({ categories, showB
   return (
     <>
       {/* Desktop Sidebar */}
-      <aside className={`hidden lg:block lg:col-span-1 ${showBorderRight ? "border-r border-gray-200" : ""}`}>
+      <aside
+        className={`hidden lg:block lg:col-span-1 ${
+          showBorderRight
+            ? "relative -mt-4 border-r border-gray-200 pt-4"
+            : ""
+        }`}
+      >
         <div className="sticky top-4">
-          <div className="h-[240px] sm:h-[300px] md:h-[360px] lg:h-[460px] overflow-y-auto scroll-smooth scrollbar-thin">
+          <div
+            className={`h-[240px] sm:h-[300px] md:h-[360px] lg:h-[460px] overflow-y-auto scroll-smooth scrollbar-thin ${
+              showBorderRight
+                ? "rounded-lg bg-white shadow-md"
+                : ""
+            }`}
+          >
             <ul className="space-y-0.5 pr-4 lg:pr-6">
               {mainCategories.map((category) => renderCategoryItem(category))}
             </ul>

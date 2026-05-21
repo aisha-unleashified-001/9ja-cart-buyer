@@ -64,28 +64,38 @@ const TopDealsPanel: React.FC = () => {
 
   return (
     <aside className="hidden lg:block lg:col-span-1">
-      <div className="h-[460px] rounded-lg border border-gray-200 bg-white p-4">
-        <p className="text-sm font-bold uppercase tracking-wide text-gray-800">
+      <div className="flex h-[460px] flex-col rounded-lg border border-gray-200 bg-white p-4">
+        <p className="flex items-center justify-center gap-1.5 text-center text-sm font-bold uppercase tracking-wide text-gray-800">
           Top Deals Today
+          <span aria-hidden="true">🔥</span>
         </p>
         <div className="mt-3 grid grid-cols-3 gap-2 text-center">
-          <div className="rounded-md bg-gray-50 py-2">
-            <p className="text-base font-bold text-gray-900">08</p>
-            <p className="text-[10px] uppercase text-gray-500">HRS</p>
+          <div className="flex flex-col items-center">
+            <div className="w-full rounded-md bg-[#8DEB6E]/30 px-2 py-2">
+              <p className="text-2xl font-bold leading-none text-primary">08</p>
+            </div>
+            <p className="mt-1 text-[10px] uppercase text-gray-500">HRS</p>
           </div>
-          <div className="rounded-md bg-gray-50 py-2">
-            <p className="text-base font-bold text-gray-900">34</p>
-            <p className="text-[10px] uppercase text-gray-500">MINS</p>
+          <div className="flex flex-col items-center">
+            <div className="w-full rounded-md bg-[#8DEB6E]/30 px-2 py-2">
+              <p className="text-2xl font-bold leading-none text-primary">34</p>
+            </div>
+            <p className="mt-1 text-[10px] uppercase text-gray-500">MINS</p>
           </div>
-          <div className="rounded-md bg-gray-50 py-2">
-            <p className="text-base font-bold text-gray-900">19</p>
-            <p className="text-[10px] uppercase text-gray-500">SECS</p>
+          <div className="flex flex-col items-center">
+            <div className="w-full rounded-md bg-[#8DEB6E]/30 px-2 py-2">
+              <p className="text-2xl font-bold leading-none text-primary">19</p>
+            </div>
+            <p className="mt-1 text-[10px] uppercase text-gray-500">SECS</p>
           </div>
         </div>
 
-        <div className="mt-4 rounded-lg border border-gray-100 p-3 transition-colors hover:border-primary/40">
-          <Link to={`/products/${product.id}`} className="block">
-            <div className="relative aspect-square overflow-hidden rounded-md bg-gray-50">
+        <div className="mt-3 flex min-h-0 flex-1 flex-col">
+          <Link
+            to={`/products/${product.id}`}
+            className="flex min-h-0 flex-1 flex-col"
+          >
+            <div className="relative aspect-square shrink-0 overflow-hidden rounded-md bg-gray-50">
               {discount && discount.percentage > 0 && (
                 <Badge
                   variant="destructive"
@@ -101,10 +111,11 @@ const TopDealsPanel: React.FC = () => {
                 loading="lazy"
               />
             </div>
-            <h3 className="mt-3 line-clamp-2 text-sm font-medium text-gray-900">
+            <div className="min-h-0 flex-1" aria-hidden="true" />
+            <h3 className="line-clamp-2 shrink-0 text-sm font-medium text-gray-900">
               {product.name}
             </h3>
-            <div className="mt-2 flex items-center gap-2">
+            <div className="mt-2 flex shrink-0 items-center gap-2">
               <span className="text-base font-semibold text-primary">
                 {formatPrice(currentPrice)}
               </span>
@@ -116,7 +127,7 @@ const TopDealsPanel: React.FC = () => {
             </div>
           </Link>
 
-          <Link to="/products" className="mt-4 block">
+          <Link to="/products" className="mt-4 block shrink-0">
             <Button className="w-full border-0 bg-primary text-white hover:bg-primary/90">
               Shop Now
             </Button>

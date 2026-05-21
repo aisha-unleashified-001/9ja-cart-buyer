@@ -3,7 +3,7 @@ import { useBuyerActiveProductsList } from "../../hooks/api/useRealProducts";
 import { ProductCard } from "../Product";
 import { Button, Alert } from "../UI";
 import { Link } from "react-router-dom";
-import { Loader2 } from "lucide-react";
+import { ChevronRight, Loader2 } from "lucide-react";
 import { normalizeProductImages } from "@/lib/utils";
 
 export default function FlashSales() {
@@ -68,35 +68,64 @@ export default function FlashSales() {
     return null;
   }
 
+  const viewAllButtonClass =
+    "bg-white border-[#2ac12a] text-gray-900 hover:bg-[#8DEB6E] hover:text-[#1E4700] hover:border-[#2ac12a]";
+
   return (
     <section id="flash-deals" className="py-8 sm:py-12 bg-gray-50">
       <div className="mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header Section */}
-        <div className="mb-8">
-          <SectionHeader text="Today's deal" subtitle="Explore products with remarkable discounts" />
+        <div className="mb-8 flex items-center justify-between gap-4">
+          <SectionHeader
+            text="Today's deal"
+            subtitle="Explore products with remarkable discounts"
+          />
+          <Link to="/products" className="shrink-0">
+            <Button
+              variant="outline"
+              className={`hidden items-center gap-2 sm:flex ${viewAllButtonClass}`}
+            >
+              View All Products
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </Link>
         </div>
 
-        {/* Product Grid - Improved responsive layout */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-5 gap-3 sm:gap-4 lg:gap-6">
-          {uniqueFlashSaleProducts.map((product) => (
-            <ProductCard
-              key={product.id}
-              product={normalizeProductImages(product)}
-              eagerImages
-              highlightAsFlashSale
-              className="w-full"
-            />
-          ))}
+        <div
+          className={`@container pb-2 ${
+            uniqueFlashSaleProducts.length > 5
+              ? "overflow-x-auto scrollbar-hide"
+              : "overflow-x-hidden"
+          }`}
+        >
+          <div
+            className={`flex gap-3 sm:gap-4 lg:gap-6 ${
+              uniqueFlashSaleProducts.length > 5 ? "w-max min-w-full" : "w-full"
+            }`}
+          >
+            {uniqueFlashSaleProducts.map((product) => (
+              <div
+                key={product.id}
+                className="w-[calc((100cqw-0.75rem)/2)] shrink-0 sm:w-[calc((100cqw-2rem)/3)] md:w-[calc((100cqw-3rem)/4)] lg:w-[calc((100cqw-6rem)/5)]"
+              >
+                <ProductCard
+                  product={normalizeProductImages(product)}
+                  eagerImages
+                  highlightAsFlashSale
+                  className="h-full w-full"
+                />
+              </div>
+            ))}
+          </div>
         </div>
 
-        {/* View All Button */}
-        <div className="flex justify-center mt-8 sm:mt-12">
+        <div className="mt-6 flex justify-center sm:hidden">
           <Link to="/products">
             <Button
               variant="outline"
-              className="px-6 sm:px-8 py-2 sm:py-3 text-sm sm:text-base bg-white border-[#2ac12a] text-gray-900 hover:bg-[#8DEB6E] hover:text-[#1E4700] hover:border-[#2ac12a]"
+              className={`flex items-center gap-2 ${viewAllButtonClass}`}
             >
               View All Products
+              <ChevronRight className="h-4 w-4" />
             </Button>
           </Link>
         </div>

@@ -10,11 +10,14 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@aws-amplify/ui-react-liveness": "^3.6.5",
     "@hookform/resolvers": "^5.2.1",
+    "@neocash/bnpl-widget": "^0.1.4",
     "@react-oauth/google": "^0.13.4",
     "@tailwindcss/vite": "^4.1.11",
     "@tanstack/react-query": "^5.85.0",
     "@types/react-router-dom": "^5.3.3",
+    "aws-amplify": "^6.17.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "framer-motion": "^12.24.12",

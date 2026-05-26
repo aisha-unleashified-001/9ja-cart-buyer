@@ -180,7 +180,7 @@ const CategoriesSidebar: React.FC<CategoriesSidebarProps> = ({ categories, showB
       <aside
         className={`hidden lg:block lg:col-span-1 ${
           showBorderRight
-            ? "relative -mt-4 border-r border-gray-200 pt-4"
+            ? "relative -mt-4 pt-4"
             : ""
         }`}
       >

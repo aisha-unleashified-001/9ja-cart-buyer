@@ -1,8 +1,10 @@
-import React, { useState, useEffect, useRef, useMemo } from "react";
+﻿import React, { useState, useEffect, useRef, useMemo } from "react";
 import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import visaLogo from "@/assets/payment-logos/visa-logo.png";
 import mastercardLogo from "@/assets/payment-logos/mastercard-logo.png";
 import wakaLineLogoWhite from "@/assets/mywakawaka-logo-white.png";
+import { init as initBnplWidget } from "@neocash/bnpl-widget";
+import type { WidgetHandle } from "@neocash/bnpl-widget";
 import {
   CreditCard,
   Truck,
@@ -10,7 +12,6 @@ import {
   AlertCircle,
   User,
   Plus,
-  X,
 } from "lucide-react";
 import {
   Button,
@@ -50,6 +51,7 @@ import { useCheckoutCouponStore } from "../../store/useCheckoutCouponStore";
 import { apiErrorUtils } from "../../utils/api-errors";
 import { cn } from "../../lib/utils";
 import { formatPrice } from "../../lib/productUtils";
+import { config } from "../../lib/config";
 import type { UserAddress } from "../../types";
 
 interface PaymentMethod {
@@ -59,42 +61,8 @@ interface PaymentMethod {
   disabled?: boolean;
 }
 
-interface BnplAddress {
-  street: string;
-  town: string;
-  state: string;
-}
-
-interface BnplWorkInformation {
-  company: string;
-  job_role: string;
-  monthly_salary: number;
-  start_date: string;
-  office_address: BnplAddress;
-}
-
-interface BnplProfileForm {
-  first_name: string;
-  last_name: string;
-  phone: string;
-  email: string;
-  partner_ref: string;
-  bvn: string;
-  nin: string;
-  date_of_birth: string;
-  gender: number;
-  state_of_origin: string;
-  home_address: BnplAddress;
-  work_information: BnplWorkInformation;
-}
-
-type BnplStatus = "approved" | "pending" | "rejected";
-type BnplStep = "info" | "form" | "otp" | "processing" | "decision";
-type BnplFormStep = "identity" | "details";
-
 const CHECKOUT_GUEST_PARAM = "guest";
-const BNPL_INPUT_STROKE_CLASS = "w-full !border-gray-400";
-const BNPL_OTP_LENGTH = 6;
+
 const NIGERIAN_STATES = [
   "Abia",
   "Adamawa",
@@ -165,45 +133,10 @@ const CheckoutPage: React.FC = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [isRedirectingToPayment, setIsRedirectingToPayment] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState("bank-card");
-  const [showBnplModal, setShowBnplModal] = useState(false);
-  const [bnplStep, setBnplStep] = useState<BnplStep>("info");
-  const [bnplFormStep, setBnplFormStep] = useState<BnplFormStep>("identity");
-  const [bnplStatus, setBnplStatus] = useState<BnplStatus | null>(null);
-  const [bnplValidationError, setBnplValidationError] = useState<string | null>(
-    null
-  );
-  const [bnplOtp, setBnplOtp] = useState("");
-  const [bnplOtpError, setBnplOtpError] = useState<string | null>(null);
-  const [bnplOtpTarget] = useState("123456"); // Frontend demo OTP; no API interaction.
-  const bnplOtpInputRefs = useRef<Array<HTMLInputElement | null>>([]);
-  const [bnplProfile, setBnplProfile] = useState<BnplProfileForm>({
-    first_name: "Adebayo",
-    last_name: "Ogunlesi",
-    phone: "+2348012345678",
-    email: "adebayo@example.com",
-    partner_ref: "REF-001",
-    bvn: "22345678901",
-    nin: "12345678901",
-    date_of_birth: "1990-05-15",
-    gender: 1,
-    state_of_origin: "Lagos",
-    home_address: {
-      street: "45 Ozumba Mbadiwe Rd",
-      town: "Lekki",
-      state: "Lagos",
-    },
-    work_information: {
-      company: "Unilever Nigeria Ltd.",
-      job_role: "Head of Finance",
-      monthly_salary: 540000000,
-      start_date: "31-09-1977",
-      office_address: {
-        street: "45 Ozumba Mbadiwe Rd",
-        town: "Lekki",
-        state: "Lagos",
-      },
-    },
-  });
+  const bnplWidgetHandleRef = useRef<WidgetHandle | null>(null);
+  // Kept in a ref so the widget callbacks always see the latest version
+  // without the widget needing to be re-initialised on every render.
+  const handlePlaceOrderRef = useRef<(() => Promise<void>) | null>(null);
   const [showSuccess, setShowSuccess] = useState(false);
   const [orderNumber, setOrderNumber] = useState("");
   const [validationErrors, setValidationErrors] = useState<ValidationError[]>(
@@ -229,7 +162,7 @@ const CheckoutPage: React.FC = () => {
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const justSavedAddressRef = useRef(false);
 
-  // Coupon state (persisted in session for cart ↔ checkout)
+  // Coupon state (persisted in session for cart â†” checkout)
   const appliedCoupon = useCheckoutCouponStore((s) => s.appliedCoupon);
   const couponPricingSnapshot = useCheckoutCouponStore((s) => s.pricingSnapshot);
   const setPersistedCoupon = useCheckoutCouponStore((s) => s.setPersistedCoupon);
@@ -448,7 +381,7 @@ const CheckoutPage: React.FC = () => {
     if (drift <= 1) return;
     clearPersistedCoupon();
     setCouponError(
-      "Cart changed — please re-apply your coupon if you still want the discount."
+      "Cart changed â€” please re-apply your coupon if you still want the discount."
     );
   }, [appliedCoupon, couponPricingSnapshot, cartSubtotal, clearPersistedCoupon]);
 
@@ -680,13 +613,73 @@ const CheckoutPage: React.FC = () => {
 
   useEffect(() => {
     if (selectedPayment !== "buy-now-pay-later") {
-      setShowBnplModal(false);
+      bnplWidgetHandleRef.current?.close();
+      bnplWidgetHandleRef.current = null;
       return;
     }
-    setShowBnplModal(true);
-    setBnplStep("info");
-    setBnplStatus(null);
-    setBnplValidationError(null);
+
+    const widgetCart = {
+      items: itemsForCheckout.map((item) => ({
+        name: item.product.name,
+        qty: item.quantity,
+        // App stores prices in naira; widget expects kobo (naira x100)
+        price: Math.round(
+          (typeof item.product.price === "number"
+            ? item.product.price
+            : item.product.price.current) * 100
+        ),
+        imageUrl: item.product.images?.main ?? undefined,
+      })),
+      total: Math.round(total * 100),
+      currency: "NGN" as const,
+    };
+
+    const prefill: Record<string, string | undefined> = {};
+    if (billingDetails.firstName) prefill.firstName = billingDetails.firstName;
+    if (billingDetails.lastName) prefill.lastName = billingDetails.lastName;
+    if (billingDetails.phoneNumber) prefill.phone = billingDetails.phoneNumber;
+    if (billingDetails.emailAddress) prefill.email = billingDetails.emailAddress;
+
+    const handle = initBnplWidget({
+      publicKey: config.neocash.publicKey,
+      cart: widgetCart,
+      ...(Object.keys(prefill).length > 0 && { partnerPrefill: prefill }),
+      theme: {
+        primary: "#8DEB6E",
+        primaryStrong: "#2ac12a",
+        primarySoft: "#c8f5b3",
+        primaryWash: "#f0fde8",
+        ink: "#1E4700",
+        surface: "#f7f8fa",
+        border: "#e9eaf0",
+        fontFamily: '"Inter", system-ui, sans-serif',
+      },
+      onApprovalPending: (_applicationId) => {
+        // Place the order after the BNPL application has been submitted.
+        // selectedPayment is still "buy-now-pay-later" at this point so
+        // handlePlaceOrder will map it to "bnpl" for the API call.
+        handlePlaceOrderRef.current?.();
+      },
+      onClose: () => {
+        bnplWidgetHandleRef.current = null;
+        setSelectedPayment("bank-card");
+      },
+      onError: (err) => {
+        console.error("NeoCash BNPL widget error:", err);
+        bnplWidgetHandleRef.current = null;
+        setSelectedPayment("bank-card");
+      },
+    });
+
+    bnplWidgetHandleRef.current = handle;
+
+    return () => {
+      handle.close();
+      bnplWidgetHandleRef.current = null;
+    };
+    // Only re-run when the payment method changes -- cart snapshot is
+    // intentionally captured once when the user opens the widget.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedPayment]);
 
   const persistGuestRegisterPrefill = () => {
@@ -703,189 +696,6 @@ const CheckoutPage: React.FC = () => {
     } catch {
       /* ignore quota / private mode */
     }
-  };
-
-  const handleBnplProfileChange = (
-    field: keyof Omit<
-      BnplProfileForm,
-      "home_address" | "work_information" | "gender"
-    >,
-    value: string
-  ) => {
-    setBnplProfile((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
-    setBnplValidationError(null);
-  };
-
-  const handleBnplHomeAddressChange = (field: keyof BnplAddress, value: string) => {
-    setBnplProfile((prev) => ({
-      ...prev,
-      home_address: {
-        ...prev.home_address,
-        [field]: value,
-      },
-    }));
-    setBnplValidationError(null);
-  };
-
-  const handleBnplWorkInfoChange = (
-    field: keyof Omit<BnplWorkInformation, "office_address" | "monthly_salary">,
-    value: string
-  ) => {
-    setBnplProfile((prev) => ({
-      ...prev,
-      work_information: {
-        ...prev.work_information,
-        [field]: value,
-      },
-    }));
-    setBnplValidationError(null);
-  };
-
-  const handleBnplOfficeAddressChange = (
-    field: keyof BnplAddress,
-    value: string
-  ) => {
-    setBnplProfile((prev) => ({
-      ...prev,
-      work_information: {
-        ...prev.work_information,
-        office_address: {
-          ...prev.work_information.office_address,
-          [field]: value,
-        },
-      },
-    }));
-    setBnplValidationError(null);
-  };
-
-  const handleBnplApplicationSubmit = async () => {
-    const requiredFields = [
-      bnplProfile.first_name,
-      bnplProfile.last_name,
-      bnplProfile.phone,
-      bnplProfile.email,
-      bnplProfile.partner_ref,
-      bnplProfile.bvn,
-      bnplProfile.nin,
-      bnplProfile.date_of_birth,
-      bnplProfile.state_of_origin,
-      bnplProfile.home_address.street,
-      bnplProfile.home_address.town,
-      bnplProfile.home_address.state,
-      bnplProfile.work_information.company,
-      bnplProfile.work_information.job_role,
-      bnplProfile.work_information.start_date,
-      bnplProfile.work_information.office_address.street,
-      bnplProfile.work_information.office_address.town,
-      bnplProfile.work_information.office_address.state,
-    ];
-
-    const hasEmptyField = requiredFields.some((value) => !value.trim());
-    if (
-      hasEmptyField ||
-      bnplProfile.gender < 1 ||
-      bnplProfile.work_information.monthly_salary <= 0
-    ) {
-      setBnplValidationError("Please complete all BNPL profile fields.");
-      return;
-    }
-
-    if (!/^\d{11}$/.test(bnplProfile.bvn)) {
-      setBnplValidationError("BVN must be 11 digits.");
-      return;
-    }
-
-    if (!/^\d{11}$/.test(bnplProfile.nin)) {
-      setBnplValidationError("NIN must be 11 digits.");
-      return;
-    }
-
-    if (!/\S+@\S+\.\S+/.test(bnplProfile.email)) {
-      setBnplValidationError("Please enter a valid email address.");
-      return;
-    }
-
-    setBnplValidationError(null);
-    setBnplOtp("");
-    setBnplOtpError(null);
-    setBnplStatus(null);
-    setBnplStep("otp");
-  };
-
-  const handleBnplOtpVerify = async () => {
-    const otp = bnplOtp.replace(/\D/g, "").slice(0, BNPL_OTP_LENGTH);
-    if (otp.length !== BNPL_OTP_LENGTH) {
-      setBnplOtpError("Enter the 6-digit OTP sent to your phone.");
-      return;
-    }
-
-    if (otp !== bnplOtpTarget) {
-      setBnplOtpError("Invalid OTP. Please try again.");
-      return;
-    }
-
-    setBnplOtpError(null);
-    setBnplStep("processing");
-
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    setBnplStatus("pending");
-    setBnplStep("decision");
-  };
-
-  const handleBnplOtpChange = (index: number, value: string) => {
-    const digit = value.replace(/\D/g, "").slice(-1);
-    const otpChars = bnplOtp.padEnd(BNPL_OTP_LENGTH, " ").split("");
-    otpChars[index] = digit || " ";
-    const nextOtp = otpChars.join("").replace(/\s/g, "");
-    setBnplOtp(nextOtp);
-    setBnplOtpError(null);
-
-    if (digit && index < BNPL_OTP_LENGTH - 1) {
-      bnplOtpInputRefs.current[index + 1]?.focus();
-    }
-  };
-
-  const handleBnplOtpKeyDown = (
-    index: number,
-    event: React.KeyboardEvent<HTMLInputElement>
-  ) => {
-    if (event.key !== "Backspace") return;
-
-    const otpChars = bnplOtp.padEnd(BNPL_OTP_LENGTH, " ").split("");
-    if (otpChars[index]?.trim()) return;
-
-    if (index > 0) {
-      bnplOtpInputRefs.current[index - 1]?.focus();
-    }
-  };
-
-  const handleBnplOtpPaste = (event: React.ClipboardEvent<HTMLInputElement>) => {
-    event.preventDefault();
-    const pastedDigits = event.clipboardData
-      .getData("text")
-      .replace(/\D/g, "")
-      .slice(0, BNPL_OTP_LENGTH);
-
-    if (!pastedDigits) return;
-
-    setBnplOtp(pastedDigits);
-    setBnplOtpError(null);
-    const focusIndex = Math.min(pastedDigits.length, BNPL_OTP_LENGTH - 1);
-    bnplOtpInputRefs.current[focusIndex]?.focus();
-  };
-
-  const handleCloseBnplModal = () => {
-    setShowBnplModal(false);
-    setSelectedPayment("bank-card");
-    setBnplStep("info");
-    setBnplFormStep("identity");
-    setBnplStatus(null);
-    setBnplValidationError(null);
-    setBnplOtp("");
-    setBnplOtpError(null);
   };
 
   const handleRemoveAllNonLagosFromCheckout = () => {
@@ -1101,7 +911,7 @@ const CheckoutPage: React.FC = () => {
 
       throw new Error(response.message || "Failed to place order");
     } catch (error) {
-      console.error("❌ Checkout failed:", error);
+      console.error("âŒ Checkout failed:", error);
 
       const errorMessage = apiErrorUtils.getErrorMessage(error);
       const errorDetails = error instanceof Error ? error.message : errorMessage;
@@ -1121,6 +931,9 @@ const CheckoutPage: React.FC = () => {
       setIsProcessing(false);
     }
   };
+
+  // Keep the ref in sync so the widget callback always calls the latest version.
+  handlePlaceOrderRef.current = handlePlaceOrder;
 
   const handleSuccessClose = () => {
     setShowSuccess(false);
@@ -1253,10 +1066,10 @@ const CheckoutPage: React.FC = () => {
                     Benefits of signing in:
                   </h4>
                   <ul className="text-sm text-[#1E4700] space-y-1">
-                    <li>• Faster checkout with saved information</li>
-                    <li>• Order tracking and history</li>
-                    <li>• Exclusive member offers</li>
-                    <li>• Easy returns and exchanges</li>
+                    <li>â€¢ Faster checkout with saved information</li>
+                    <li>â€¢ Order tracking and history</li>
+                    <li>â€¢ Exclusive member offers</li>
+                    <li>â€¢ Easy returns and exchanges</li>
                   </ul>
                 </div>
               </CardContent>
@@ -1637,7 +1450,7 @@ const CheckoutPage: React.FC = () => {
                         </div>
                       )}
 
-                    {/* Guest: optional account creation (password → signup / OTP flow) */}
+                    {/* Guest: optional account creation (password â†’ signup / OTP flow) */}
                     {!isAuthenticated && checkoutAsGuest && (
                       <div className="pt-4 p-4 bg-gray-50 rounded-lg space-y-4">
                         <div className="flex items-start space-x-2">
@@ -1788,7 +1601,7 @@ const CheckoutPage: React.FC = () => {
                       Remove All Non-Lagos Items
                     </Button>
                     <p className="text-xs text-green-900/80">
-                      Removes non-Lagos lines from this checkout only — they stay in your
+                      Removes non-Lagos lines from this checkout only â€” they stay in your
                       cart.
                     </p>
                   </div>
@@ -1808,7 +1621,7 @@ const CheckoutPage: React.FC = () => {
                   {heavyCheckoutItems.map((item) => (
                     <li key={item.product.id}>
                       <span className="font-medium">{item.product.name}</span>
-                      {' '}— {((item.product.shipping.weight ?? 0)).toFixed(2).replace(/\.00$/, '')}KG
+                      {' '}â€” {((item.product.shipping.weight ?? 0)).toFixed(2).replace(/\.00$/, '')}KG
                     </li>
                   ))}
                 </ul>
@@ -1885,7 +1698,7 @@ const CheckoutPage: React.FC = () => {
                               {opt.price !== undefined && (
                                 <span className="text-gray-700">
                                   {" "}
-                                  · {formatPrice(opt.price)}
+                                  Â· {formatPrice(opt.price)}
                                 </span>
                               )}
                               {(opt.eta ?? opt.estimatedArrival) && (
@@ -1958,7 +1771,7 @@ const CheckoutPage: React.FC = () => {
                       disabled={isCouponRemoving}
                       className="text-red-600 hover:text-red-700 hover:bg-red-50"
                     >
-                      {isCouponRemoving ? "Removing…" : "Remove"}
+                      {isCouponRemoving ? "Removingâ€¦" : "Remove"}
                     </Button>
                   </div>
                 ) : (
@@ -1984,7 +1797,7 @@ const CheckoutPage: React.FC = () => {
                         onClick={() => void handleApplyCoupon()}
                         disabled={!couponCode.trim() || isCouponApplying}
                       >
-                        {isCouponApplying ? "Applying…" : "Apply"}
+                        {isCouponApplying ? "Applyingâ€¦" : "Apply"}
                       </Button>
                     </div>
 
@@ -2130,546 +1943,10 @@ const CheckoutPage: React.FC = () => {
             onClose={handleSuccessClose}
           />
         )}
-
-        {showBnplModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-            <div className="w-full max-w-2xl rounded-xl bg-white shadow-2xl">
-              <div className="flex items-center justify-between border-b border-gray-200 px-5 py-4">
-                <h3 className="text-lg font-semibold text-gray-900">
-                  Buy Now, Pay Later
-                </h3>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleCloseBnplModal}
-                  className="text-gray-500 hover:text-gray-700 p-1"
-                  aria-label="Close BNPL modal"
-                >
-                  <X className="h-5 w-5" />
-                </Button>
-              </div>
-
-              <div className="p-5">
-                {bnplStep === "info" && (
-                  <div className="space-y-4">
-                    <h4 className="text-base font-semibold text-gray-900">
-                      Split your payment into flexible installments
-                    </h4>
-                    <div className="text-sm text-gray-700 space-y-2">
-                      <p>
-                        Choose BNPL to spread payments with clear terms before
-                        completing your order.
-                      </p>
-                      <p>
-                        <span className="font-medium">Duration:</span> Up to 3
-                        monthly installments
-                      </p>
-                      <p>
-                        <span className="font-medium">Interest:</span> 0% for
-                        eligible users
-                      </p>
-                    </div>
-                    <Button
-                      type="button"
-                      className="w-full bg-[#8DEB6E] hover:bg-[#8DEB6E]/90 text-primary border border-[#2ac12a]"
-                      onClick={() => {
-                        setBnplFormStep("identity");
-                        setBnplStep("form");
-                      }}
-                    >
-                      Continue with BNPL
-                    </Button>
-                  </div>
-                )}
-
-                {bnplStep === "form" && (
-                  <div className="space-y-4">
-                    <h4 className="text-base font-semibold text-gray-900">
-                      BNPL Application Form
-                    </h4>
-                    {bnplFormStep === "identity" && (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div className="space-y-1">
-                          <label className="text-sm font-medium text-gray-700">
-                            First Name
-                          </label>
-                          <Input
-                            value={bnplProfile.first_name}
-                            onChange={(e) =>
-                              handleBnplProfileChange(
-                                "first_name",
-                                e.target.value
-                              )
-                            }
-                            placeholder="First name"
-                            className={BNPL_INPUT_STROKE_CLASS}
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <label className="text-sm font-medium text-gray-700">
-                            Last Name
-                          </label>
-                          <Input
-                            value={bnplProfile.last_name}
-                            onChange={(e) =>
-                              handleBnplProfileChange(
-                                "last_name",
-                                e.target.value
-                              )
-                            }
-                            placeholder="Last name"
-                            className={BNPL_INPUT_STROKE_CLASS}
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <label className="text-sm font-medium text-gray-700">
-                            Phone
-                          </label>
-                          <Input
-                            value={bnplProfile.phone}
-                            onChange={(e) =>
-                              handleBnplProfileChange("phone", e.target.value)
-                            }
-                            placeholder="+2348012345678"
-                            className={BNPL_INPUT_STROKE_CLASS}
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <label className="text-sm font-medium text-gray-700">
-                            Email
-                          </label>
-                          <Input
-                            type="email"
-                            value={bnplProfile.email}
-                            onChange={(e) =>
-                              handleBnplProfileChange("email", e.target.value)
-                            }
-                            placeholder="email@example.com"
-                            className={BNPL_INPUT_STROKE_CLASS}
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <label className="text-sm font-medium text-gray-700">
-                            Partner Reference
-                          </label>
-                          <Input
-                            value={bnplProfile.partner_ref}
-                            onChange={(e) =>
-                              handleBnplProfileChange(
-                                "partner_ref",
-                                e.target.value
-                              )
-                            }
-                            placeholder="Partner reference"
-                            className={BNPL_INPUT_STROKE_CLASS}
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <label className="text-sm font-medium text-gray-700">
-                            BVN
-                          </label>
-                          <Input
-                            value={bnplProfile.bvn}
-                            onChange={(e) =>
-                              handleBnplProfileChange("bvn", e.target.value)
-                            }
-                            placeholder="22345678901"
-                            className={BNPL_INPUT_STROKE_CLASS}
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <label className="text-sm font-medium text-gray-700">
-                            NIN
-                          </label>
-                          <Input
-                            value={bnplProfile.nin}
-                            onChange={(e) =>
-                              handleBnplProfileChange("nin", e.target.value)
-                            }
-                            placeholder="12345678901"
-                            className={BNPL_INPUT_STROKE_CLASS}
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <label className="text-sm font-medium text-gray-700">
-                            Date of Birth
-                          </label>
-                          <Input
-                            type="date"
-                            value={bnplProfile.date_of_birth}
-                            onChange={(e) =>
-                              handleBnplProfileChange(
-                                "date_of_birth",
-                                e.target.value
-                              )
-                            }
-                            className={BNPL_INPUT_STROKE_CLASS}
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <label className="text-sm font-medium text-gray-700">
-                            Gender
-                          </label>
-                          <select
-                            value={bnplProfile.gender}
-                            onChange={(e) =>
-                              setBnplProfile((prev) => ({
-                                ...prev,
-                                gender: Number(e.target.value),
-                              }))
-                            }
-                            className="h-10 w-full rounded-md border border-gray-400 bg-background px-3 py-2 text-sm"
-                          >
-                            <option value={1}>Male</option>
-                            <option value={2}>Female</option>
-                            <option value={3}>Other</option>
-                          </select>
-                        </div>
-                        <div className="space-y-1 sm:col-span-2">
-                          <label className="text-sm font-medium text-gray-700">
-                            State of Origin
-                          </label>
-                          <Input
-                            value={bnplProfile.state_of_origin}
-                            onChange={(e) =>
-                              handleBnplProfileChange(
-                                "state_of_origin",
-                                e.target.value
-                              )
-                            }
-                            placeholder="Lagos"
-                            className={BNPL_INPUT_STROKE_CLASS}
-                          />
-                        </div>
-                      </div>
-                    )}
-
-                    {bnplFormStep === "identity" && (
-                      <Button
-                        type="button"
-                        className="w-full bg-[#8DEB6E] hover:bg-[#8DEB6E]/90 text-primary border border-[#2ac12a]"
-                        onClick={() => {
-                          setBnplValidationError(null);
-                          setBnplFormStep("details");
-                        }}
-                      >
-                        Next
-                      </Button>
-                    )}
-
-                    {bnplFormStep === "details" && (
-                      <>
-                        <div className="rounded-lg border border-gray-200 p-3 space-y-3">
-                      <h5 className="text-sm font-semibold text-gray-900">
-                        Home Address
-                      </h5>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div className="space-y-1 sm:col-span-2">
-                          <label className="text-sm font-medium text-gray-700">
-                            Street
-                          </label>
-                          <Input
-                            value={bnplProfile.home_address.street}
-                            onChange={(e) =>
-                              handleBnplHomeAddressChange("street", e.target.value)
-                            }
-                            placeholder="45 Ozumba Mbadiwe Rd"
-                            className={BNPL_INPUT_STROKE_CLASS}
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <label className="text-sm font-medium text-gray-700">
-                            Town
-                          </label>
-                          <Input
-                            value={bnplProfile.home_address.town}
-                            onChange={(e) =>
-                              handleBnplHomeAddressChange("town", e.target.value)
-                            }
-                            placeholder="Lekki"
-                            className={BNPL_INPUT_STROKE_CLASS}
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <label className="text-sm font-medium text-gray-700">
-                            State
-                          </label>
-                          <Input
-                            value={bnplProfile.home_address.state}
-                            onChange={(e) =>
-                              handleBnplHomeAddressChange("state", e.target.value)
-                            }
-                            placeholder="Lagos"
-                            className={BNPL_INPUT_STROKE_CLASS}
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="rounded-lg border border-gray-200 p-3 space-y-3">
-                      <h5 className="text-sm font-semibold text-gray-900">
-                        Work Information
-                      </h5>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div className="space-y-1">
-                          <label className="text-sm font-medium text-gray-700">
-                            Company
-                          </label>
-                          <Input
-                            value={bnplProfile.work_information.company}
-                            onChange={(e) =>
-                              handleBnplWorkInfoChange("company", e.target.value)
-                            }
-                            placeholder="Unilever Nigeria Ltd."
-                            className={BNPL_INPUT_STROKE_CLASS}
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <label className="text-sm font-medium text-gray-700">
-                            Job Role
-                          </label>
-                          <Input
-                            value={bnplProfile.work_information.job_role}
-                            onChange={(e) =>
-                              handleBnplWorkInfoChange("job_role", e.target.value)
-                            }
-                            placeholder="Head of Finance"
-                            className={BNPL_INPUT_STROKE_CLASS}
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <label className="text-sm font-medium text-gray-700">
-                            Monthly Salary
-                          </label>
-                          <Input
-                            type="number"
-                            value={bnplProfile.work_information.monthly_salary}
-                            onChange={(e) =>
-                              setBnplProfile((prev) => ({
-                                ...prev,
-                                work_information: {
-                                  ...prev.work_information,
-                                  monthly_salary: Number(e.target.value || 0),
-                                },
-                              }))
-                            }
-                            placeholder="540000000"
-                            className={BNPL_INPUT_STROKE_CLASS}
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <label className="text-sm font-medium text-gray-700">
-                            Start Date
-                          </label>
-                          <Input
-                            value={bnplProfile.work_information.start_date}
-                            onChange={(e) =>
-                              handleBnplWorkInfoChange("start_date", e.target.value)
-                            }
-                            placeholder="31-09-1977"
-                            className={BNPL_INPUT_STROKE_CLASS}
-                          />
-                        </div>
-                      </div>
-
-                      <div className="rounded-md border border-gray-200 p-3 space-y-3">
-                        <h6 className="text-sm font-semibold text-gray-900">
-                          Office Address
-                        </h6>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                          <div className="space-y-1 sm:col-span-2">
-                            <label className="text-sm font-medium text-gray-700">
-                              Street
-                            </label>
-                            <Input
-                              value={bnplProfile.work_information.office_address.street}
-                              onChange={(e) =>
-                                handleBnplOfficeAddressChange("street", e.target.value)
-                              }
-                              placeholder="45 Ozumba Mbadiwe Rd"
-                              className={BNPL_INPUT_STROKE_CLASS}
-                            />
-                          </div>
-                          <div className="space-y-1">
-                            <label className="text-sm font-medium text-gray-700">
-                              Town
-                            </label>
-                            <Input
-                              value={bnplProfile.work_information.office_address.town}
-                              onChange={(e) =>
-                                handleBnplOfficeAddressChange("town", e.target.value)
-                              }
-                              placeholder="Lekki"
-                              className={BNPL_INPUT_STROKE_CLASS}
-                            />
-                          </div>
-                          <div className="space-y-1">
-                            <label className="text-sm font-medium text-gray-700">
-                              State
-                            </label>
-                            <Input
-                              value={bnplProfile.work_information.office_address.state}
-                              onChange={(e) =>
-                                handleBnplOfficeAddressChange("state", e.target.value)
-                              }
-                              placeholder="Lagos"
-                              className={BNPL_INPUT_STROKE_CLASS}
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    {bnplValidationError && (
-                      <p className="text-sm text-red-600">{bnplValidationError}</p>
-                    )}
-                    <div className="flex items-center gap-3">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        className="w-1/2"
-                        onClick={() => {
-                          setBnplValidationError(null);
-                          setBnplFormStep("identity");
-                        }}
-                      >
-                        Back
-                      </Button>
-                      <Button
-                        type="button"
-                        className="w-1/2 bg-[#8DEB6E] hover:bg-[#8DEB6E]/90 text-primary border border-[#2ac12a]"
-                        onClick={handleBnplApplicationSubmit}
-                      >
-                        Submit Application
-                      </Button>
-                    </div>
-                      </>
-                    )}
-                  </div>
-                )}
-
-                {bnplStep === "otp" && (
-                  <div className="space-y-4">
-                    <h4 className="text-base font-semibold text-gray-900">
-                      Enter OTP
-                    </h4>
-
-                    <p className="text-sm text-gray-700">
-                      We've sent a 6-digit OTP to{" "}
-                      <span className="font-medium text-gray-900">
-                        {bnplProfile.phone}
-                      </span>
-                      .
-                    </p>
-
-                    <div className="space-y-1">
-                      <label className="text-sm font-medium text-gray-700">
-                        OTP
-                      </label>
-                      <div className="flex items-center gap-2">
-                        {Array.from({ length: BNPL_OTP_LENGTH }, (_, index) => (
-                          <Input
-                            key={`bnpl-otp-${index}`}
-                            ref={(el) => {
-                              bnplOtpInputRefs.current[index] = el;
-                            }}
-                            value={bnplOtp[index] || ""}
-                            onChange={(e) =>
-                              handleBnplOtpChange(index, e.target.value)
-                            }
-                            onKeyDown={(e) => handleBnplOtpKeyDown(index, e)}
-                            onPaste={handleBnplOtpPaste}
-                            inputMode="numeric"
-                            maxLength={1}
-                            className="h-11 w-11 text-center text-lg font-semibold border-gray-400"
-                          />
-                        ))}
-                      </div>
-                    </div>
-
-                    {bnplOtpError && (
-                      <p className="text-sm text-red-600">{bnplOtpError}</p>
-                    )}
-
-                    <div className="flex items-center gap-3">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        className="w-1/2"
-                        onClick={() => {
-                          setBnplOtp("");
-                          setBnplOtpError(null);
-                          setBnplFormStep("details");
-                          setBnplStep("form");
-                        }}
-                      >
-                        Back
-                      </Button>
-
-                      <Button
-                        type="button"
-                        className="w-1/2 bg-[#8DEB6E] hover:bg-[#8DEB6E]/90 text-primary border border-[#2ac12a]"
-                        onClick={handleBnplOtpVerify}
-                      >
-                        Verify OTP
-                      </Button>
-                    </div>
-
-                    <p className="text-xs text-gray-500">
-                      Demo OTP: <span className="font-medium">123456</span>
-                    </p>
-                  </div>
-                )}
-
-                {bnplStep === "processing" && (
-                  <div className="py-6 text-center">
-                    <div className="flex flex-col items-center justify-center gap-3">
-                      <div className="w-8 h-8 border-4 border-[#182F38] border-t-transparent rounded-full animate-spin" />
-                      <p className="text-sm text-gray-700">
-                        We are reviewing your application...
-                      </p>
-                    </div>
-                  </div>
-                )}
-
-                {bnplStep === "decision" && bnplStatus && (
-                  <div className="space-y-2">
-                    <h4 className="text-base font-semibold text-gray-900 capitalize">
-                      Application submitted successfully
-                    </h4>
-                    {bnplStatus === "pending" && (
-                      <p className="text-sm text-amber-700 font-medium">
-                        Your BNPL application is currently being reviewed.
-                      </p>
-                    )}
-                    <p className="text-sm text-gray-600">
-                      Our team is reviewing your details.
-                    </p>
-                    {bnplStatus === "rejected" && (
-                      <>
-                        <p className="text-sm text-red-700">
-                          Application was rejected. Please use Bank/Card to
-                          complete this order.
-                        </p>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          className="w-full"
-                          onClick={handleCloseBnplModal}
-                        >
-                          Switch to Bank/Card
-                        </Button>
-                      </>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );
 };
 
 export default CheckoutPage;
+

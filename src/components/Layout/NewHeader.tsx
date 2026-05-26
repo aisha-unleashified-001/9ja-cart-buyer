@@ -260,7 +260,7 @@ const NewHeader: React.FC = () => {
               >
                 <ShoppingCart className="w-5 h-5" />
                 {totalItems > 0 && (
-                  <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-[#2ac12a] text-[10px] font-bold text-white">
+                  <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-[#8DEB6E] text-[10px] font-bold text-white">
                     {totalItems > 9 ? "9+" : totalItems}
                   </span>
                 )}
@@ -444,7 +444,7 @@ const NewHeader: React.FC = () => {
               >
                 <ShoppingCart className="w-6 h-6" />
                 {totalItems > 0 && (
-                  <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-[#2ac12a] text-[10px] font-bold text-white">
+                  <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-[#8DEB6E] text-[10px] font-bold text-white">
                     {totalItems > 99 ? "99+" : totalItems}
                   </span>
                 )}

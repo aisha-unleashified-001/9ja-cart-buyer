@@ -20,6 +20,9 @@ export const config = {
       accessToken: import.meta.env.VITE_GOOGLE_ACCESS_TOKEN || '', // Static access token from backend
     },
   },
+  neocash: {
+    publicKey: import.meta.env.VITE_NEOCASH_PUBLIC_KEY || 'pk_test_xxx',
+  },
   features: {
     // Feature flags for development
     enablePayments: false,

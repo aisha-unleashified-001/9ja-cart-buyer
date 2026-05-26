@@ -32,14 +32,14 @@ const HomeSubNav: React.FC = () => {
       aria-label="Home quick links"
     >
       <div className="mx-auto max-w-[960px] px-4 sm:px-6 lg:max-w-7xl lg:px-8 2xl:max-w-[1550px]">
-        <div className="grid grid-cols-1 gap-2 gap-y-2 py-1.5 sm:gap-3 sm:py-1.5 lg:grid-cols-5 xl:grid-cols-6 lg:items-stretch lg:gap-x-6 lg:gap-y-0 lg:py-0 lg:min-h-[48px]">
+        <div className="grid grid-cols-1 gap-2 gap-y-2 py-1.5 sm:gap-3 sm:py-1.5 lg:grid-cols-5 xl:grid-cols-6 lg:items-stretch lg:gap-x-6 lg:gap-y-0 lg:py-0 lg:min-h-[40px]">
           {/* Same width as categories column; All Categories fills cell top→bottom */}
-          <div className="relative flex min-h-touch w-full lg:col-span-1 lg:h-full lg:min-h-0 lg:after:pointer-events-none lg:after:absolute lg:after:right-0 lg:after:top-full lg:after:z-10 lg:after:h-4 lg:after:w-px lg:after:bg-gray-200">
+          <div className="relative flex min-h-touch w-full lg:col-span-1 lg:h-full lg:min-h-0">
             <Link
               to="/products"
-              className={`flex w-full flex-1 items-center gap-2 border border-white/20 bg-[#8DEB6E]/10 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#8DEB6E]/15 rounded-t-lg rounded-b-none lg:h-full lg:min-h-[48px] lg:rounded-none lg:border-0 lg:border-r lg:border-gray-200 lg:bg-[#8DEB6E]/10 lg:px-3 lg:py-0 lg:hover:bg-[#8DEB6E]/15 ${
+              className={`flex w-full flex-1 items-center gap-2 border border-white/20 bg-[#8DEB6E]/20 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#8DEB6E]/25 rounded-t-lg rounded-b-none lg:h-full lg:min-h-[40px] lg:rounded-none lg:border-0 lg:bg-[#8DEB6E]/20 lg:px-3 lg:py-0 lg:hover:bg-[#8DEB6E]/25 ${
                 isActive("/products")
-                  ? "border-[#8DEB6E]/50 bg-[#8DEB6E]/15 lg:border-r-gray-200"
+                  ? "border-[#8DEB6E]/50 bg-[#8DEB6E]/25"
                   : ""
               }`}
             >
@@ -92,7 +92,7 @@ const HomeSubNav: React.FC = () => {
           <div className="flex min-h-touch justify-start border-t border-white/20 pt-2 lg:col-span-1 lg:h-full lg:min-h-0 lg:items-center lg:justify-end lg:border-t-0 lg:pt-0">
             <Link
               to="/#flash-deals"
-              className="inline-flex min-h-touch items-center gap-1.5 rounded-md bg-[#8DEB6E]/10 px-3 py-1.5 text-sm font-semibold text-[#FACC15] transition-colors hover:bg-[#8DEB6E]/15 lg:min-h-0 lg:py-1.5"
+              className="inline-flex min-h-touch items-center gap-1.5 rounded-md bg-[#8DEB6E]/20 px-3 py-1.5 text-sm font-semibold text-[#FACC15] transition-colors hover:bg-[#8DEB6E]/25 lg:min-h-0 lg:py-1.5"
             >
               <Zap className="h-4 w-4 shrink-0 fill-[#FACC15]" aria-hidden />
               Flash Deals

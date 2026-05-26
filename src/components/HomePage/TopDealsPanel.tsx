@@ -71,22 +71,22 @@ const TopDealsPanel: React.FC = () => {
         </p>
         <div className="mt-3 grid grid-cols-3 gap-2 text-center">
           <div className="flex flex-col items-center">
-            <div className="w-full rounded-md bg-[#8DEB6E]/30 px-2 py-2">
-              <p className="text-2xl font-bold leading-none text-primary">08</p>
+            <div className="flex h-12 w-12 items-center justify-center rounded-md bg-[#8DEB6E]/20">
+              <p className="text-[28px] font-bold leading-none text-primary">08</p>
             </div>
-            <p className="mt-1 text-[10px] uppercase text-gray-500">HRS</p>
+            <p className="mt-2 text-[10px] uppercase text-gray-500">HRS</p>
           </div>
           <div className="flex flex-col items-center">
-            <div className="w-full rounded-md bg-[#8DEB6E]/30 px-2 py-2">
-              <p className="text-2xl font-bold leading-none text-primary">34</p>
+            <div className="flex h-12 w-12 items-center justify-center rounded-md bg-[#8DEB6E]/20">
+              <p className="text-[28px] font-bold leading-none text-primary">34</p>
             </div>
-            <p className="mt-1 text-[10px] uppercase text-gray-500">MINS</p>
+            <p className="mt-2 text-[10px] uppercase text-gray-500">MINS</p>
           </div>
           <div className="flex flex-col items-center">
-            <div className="w-full rounded-md bg-[#8DEB6E]/30 px-2 py-2">
-              <p className="text-2xl font-bold leading-none text-primary">19</p>
+            <div className="flex h-12 w-12 items-center justify-center rounded-md bg-[#8DEB6E]/20">
+              <p className="text-[28px] font-bold leading-none text-primary">19</p>
             </div>
-            <p className="mt-1 text-[10px] uppercase text-gray-500">SECS</p>
+            <p className="mt-2 text-[10px] uppercase text-gray-500">SECS</p>
           </div>
         </div>
 

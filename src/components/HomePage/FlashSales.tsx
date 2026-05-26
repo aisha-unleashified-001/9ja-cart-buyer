@@ -1,9 +1,10 @@
+import { useRef } from "react";
 import SectionHeader from "../UI/SectionHeader";
 import { useBuyerActiveProductsList } from "../../hooks/api/useRealProducts";
 import { ProductCard } from "../Product";
 import { Button, Alert } from "../UI";
 import { Link } from "react-router-dom";
-import { ChevronRight, Loader2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { normalizeProductImages } from "@/lib/utils";
 
 export default function FlashSales() {
@@ -24,6 +25,18 @@ export default function FlashSales() {
   const uniqueFlashSaleProducts = Array.from(
     new Map(flashSaleProducts.map((product) => [product.id, product])).values()
   );
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const hasScrollableProducts = uniqueFlashSaleProducts.length > 5;
+
+  const scrollFlashDeals = (direction: "left" | "right") => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    container.scrollBy({
+      left: direction === "left" ? -container.clientWidth : container.clientWidth,
+      behavior: "smooth",
+    });
+  };
 
   if (loading) {
     return (
@@ -90,16 +103,38 @@ export default function FlashSales() {
           </Link>
         </div>
 
-        <div
-          className={`@container pb-2 ${
-            uniqueFlashSaleProducts.length > 5
-              ? "overflow-x-auto scrollbar-hide"
-              : "overflow-x-hidden"
-          }`}
-        >
+        <div className="relative">
+          {hasScrollableProducts && (
+            <>
+              <button
+                type="button"
+                aria-label="Scroll today's deals left"
+                onClick={() => scrollFlashDeals("left")}
+                className="absolute left-2 top-1/2 z-10 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-[#2ac12a]/40 bg-white/95 text-primary shadow-md transition-colors hover:bg-[#8DEB6E]/20"
+              >
+                <ChevronLeft className="h-5 w-5" aria-hidden />
+              </button>
+              <button
+                type="button"
+                aria-label="Scroll today's deals right"
+                onClick={() => scrollFlashDeals("right")}
+                className="absolute right-2 top-1/2 z-10 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-[#2ac12a]/40 bg-white/95 text-primary shadow-md transition-colors hover:bg-[#8DEB6E]/20"
+              >
+                <ChevronRight className="h-5 w-5" aria-hidden />
+              </button>
+            </>
+          )}
+          <div
+            ref={scrollContainerRef}
+            className={`@container pb-2 ${
+              hasScrollableProducts
+                ? "overflow-x-auto scrollbar-hide"
+                : "overflow-x-hidden"
+            }`}
+          >
           <div
             className={`flex gap-3 sm:gap-4 lg:gap-6 ${
-              uniqueFlashSaleProducts.length > 5 ? "w-max min-w-full" : "w-full"
+              hasScrollableProducts ? "w-max min-w-full" : "w-full"
             }`}
           >
             {uniqueFlashSaleProducts.map((product) => (
@@ -115,6 +150,7 @@ export default function FlashSales() {
                 />
               </div>
             ))}
+          </div>
           </div>
         </div>
 

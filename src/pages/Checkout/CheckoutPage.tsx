@@ -52,6 +52,7 @@ import { apiErrorUtils } from "../../utils/api-errors";
 import { cn } from "../../lib/utils";
 import { formatPrice } from "../../lib/productUtils";
 import { config } from "../../lib/config";
+import { BNPL_WIDGET_THEME, buildPartnerPrefill } from "../../lib/bnplWidget";
 import type { UserAddress } from "../../types";
 
 interface PaymentMethod {
@@ -634,26 +635,18 @@ const CheckoutPage: React.FC = () => {
       currency: "NGN" as const,
     };
 
-    const prefill: Record<string, string | undefined> = {};
-    if (billingDetails.firstName) prefill.firstName = billingDetails.firstName;
-    if (billingDetails.lastName) prefill.lastName = billingDetails.lastName;
-    if (billingDetails.phoneNumber) prefill.phone = billingDetails.phoneNumber;
-    if (billingDetails.emailAddress) prefill.email = billingDetails.emailAddress;
+    const prefill = buildPartnerPrefill({
+      firstName: billingDetails.firstName,
+      lastName: billingDetails.lastName,
+      phone: billingDetails.phoneNumber,
+      email: billingDetails.emailAddress,
+    });
 
     const handle = initBnplWidget({
       publicKey: config.neocash.publicKey,
       cart: widgetCart,
-      ...(Object.keys(prefill).length > 0 && { partnerPrefill: prefill }),
-      theme: {
-        primary: "#8DEB6E",
-        primaryStrong: "#2ac12a",
-        primarySoft: "#c8f5b3",
-        primaryWash: "#f0fde8",
-        ink: "#1E4700",
-        surface: "#f7f8fa",
-        border: "#e9eaf0",
-        fontFamily: '"Inter", system-ui, sans-serif',
-      },
+      ...(prefill && { partnerPrefill: prefill }),
+      theme: BNPL_WIDGET_THEME,
       onApprovalPending: (_applicationId) => {
         // Place the order after the BNPL application has been submitted.
         // selectedPayment is still "buy-now-pay-later" at this point so

@@ -71,20 +71,20 @@ const TopDealsPanel: React.FC = () => {
         </p>
         <div className="mt-3 grid grid-cols-3 gap-2 text-center">
           <div className="flex flex-col items-center">
-            <div className="flex h-12 w-12 items-center justify-center rounded-md bg-[#8DEB6E]/20">
-              <p className="text-[28px] font-bold leading-none text-primary">08</p>
+            <div className="flex aspect-square size-12 shrink-0 items-center justify-center rounded-md bg-[#8DEB6E]/20 px-2.5">
+              <p className="text-[28px] font-bold leading-none text-primary tabular-nums">08</p>
             </div>
             <p className="mt-2 text-[10px] uppercase text-gray-500">HRS</p>
           </div>
           <div className="flex flex-col items-center">
-            <div className="flex h-12 w-12 items-center justify-center rounded-md bg-[#8DEB6E]/20">
-              <p className="text-[28px] font-bold leading-none text-primary">34</p>
+            <div className="flex aspect-square size-12 shrink-0 items-center justify-center rounded-md bg-[#8DEB6E]/20 px-2.5">
+              <p className="text-[28px] font-bold leading-none text-primary tabular-nums">34</p>
             </div>
             <p className="mt-2 text-[10px] uppercase text-gray-500">MINS</p>
           </div>
           <div className="flex flex-col items-center">
-            <div className="flex h-12 w-12 items-center justify-center rounded-md bg-[#8DEB6E]/20">
-              <p className="text-[28px] font-bold leading-none text-primary">19</p>
+            <div className="flex aspect-square size-12 shrink-0 items-center justify-center rounded-md bg-[#8DEB6E]/20 px-2.5">
+              <p className="text-[28px] font-bold leading-none text-primary tabular-nums">19</p>
             </div>
             <p className="mt-2 text-[10px] uppercase text-gray-500">SECS</p>
           </div>
@@ -93,9 +93,9 @@ const TopDealsPanel: React.FC = () => {
         <div className="mt-3 flex min-h-0 flex-1 flex-col">
           <Link
             to={`/products/${product.id}`}
-            className="flex min-h-0 flex-1 flex-col"
+            className="flex min-h-0 flex-1 flex-col items-center justify-center gap-2"
           >
-            <div className="relative aspect-square shrink-0 overflow-hidden rounded-md bg-gray-50">
+            <div className="relative aspect-square w-full shrink-0 overflow-hidden rounded-md bg-gray-50">
               {discount && discount.percentage > 0 && (
                 <Badge
                   variant="destructive"
@@ -107,15 +107,14 @@ const TopDealsPanel: React.FC = () => {
               <img
                 src={Array.isArray(product.images) ? product.images[0] : product.images.main}
                 alt={product.name}
-                className="h-full w-full object-cover"
+                className="h-full w-full object-cover object-center"
                 loading="lazy"
               />
             </div>
-            <div className="min-h-0 flex-1" aria-hidden="true" />
-            <h3 className="line-clamp-2 shrink-0 text-sm font-medium text-gray-900">
+            <h3 className="line-clamp-2 w-full shrink-0 text-sm font-medium text-gray-900">
               {product.name}
             </h3>
-            <div className="mt-2 flex shrink-0 items-center gap-2">
+            <div className="flex w-full shrink-0 items-center gap-2">
               <span className="text-base font-semibold text-primary">
                 {formatPrice(currentPrice)}
               </span>

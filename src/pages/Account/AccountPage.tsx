@@ -6,6 +6,7 @@ import AccountSidebar from '../../components/Account/AccountSidebar';
 import ProfileSection from '../../components/Account/ProfileSection';
 import AddressesSection from '../../components/Account/AddressesSection';
 import OrdersSection from '../../components/Account/OrdersSection';
+import PaymentSection from '../../components/Account/PaymentSection';
 import ContactAdminPage from './ContactAdminPage';
 import Container from '@/components/Layout/Container';
 import { Eye, EyeOff, Wallet } from 'lucide-react';
@@ -36,7 +37,7 @@ const AccountPage: React.FC = () => {
       case 'addresses':
         return <AddressesSection />;
       case 'payment':
-        return renderPlaceholderSection('Payment Methods', 'Manage your payment methods here');
+        return <PaymentSection />;
       case 'orders':
         return <OrdersSection />;
       case 'returns':

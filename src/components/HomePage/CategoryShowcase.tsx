@@ -62,7 +62,7 @@ function ShopCategoryCard({
               alt={category.name}
               loading="lazy"
               onError={() => setImgError(true)}
-              className="absolute inset-0 h-full w-full object-contain p-2 transition-transform duration-300 group-hover:scale-[1.03]"
+              className="absolute inset-0 h-full w-full object-contain px-0 py-1 transition-transform duration-300 group-hover:scale-[1.03]"
             />
           ) : (
             <div className="flex h-full items-center justify-center p-3">
@@ -73,7 +73,7 @@ function ShopCategoryCard({
             </div>
           )}
         </div>
-        <div className="shrink-0 border-t border-gray-100 px-2 py-2.5">
+        <div className="shrink-0 px-1 py-2.5">
           <span className="block text-center text-sm font-medium leading-snug text-gray-900 line-clamp-2">
             {category.name}
           </span>

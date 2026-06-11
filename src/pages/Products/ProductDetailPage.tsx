@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import {
   Star,
@@ -11,6 +11,14 @@ import {
   Headset,
   BadgeCheck,
   ShoppingCart,
+  ChevronLeft,
+  ChevronRight,
+  ChevronUp,
+  ChevronDown,
+  ZoomIn,
+  Check,
+  Sun,
+  Sparkles,
 } from "lucide-react";
 import {
   Breadcrumb,
@@ -21,7 +29,6 @@ import {
   Alert,
   Image,
 } from "../../components/UI";
-import SectionHeader from "@/components/UI/SectionHeader";
 import { useLayoutContext } from "@/contexts/LayoutContext";
 import { useCart } from "../../hooks/useCart";
 import { useWishlistStore } from "../../store/useWishlistStore";
@@ -32,9 +39,52 @@ import { productsApi } from "../../api/products";
 // import type { Product } from "../../types";
 import { cn, normalizeProductImages } from "../../lib/utils";
 import { formatPrice, formatDiscountPercentage } from "../../lib/productUtils";
-import { ProductCard } from "@/components/Product";
+import { RelatedProductCard } from "@/components/Product";
 import RecentlyViewedProductsSection from "@/components/HomePage/RecentlyViewedProductsSection";
 import { useNotificationContext } from "../../providers/NotificationProvider";
+import visaLogo from "@/assets/payment-logos/visa-logo.png";
+import mastercardLogo from "@/assets/payment-logos/mastercard-logo.png";
+import verveLogo from "@/assets/payment-logos/verve-logo.png";
+import applePayLogo from "@/assets/payment-logos/apple-pay-logo.png";
+import googlePayLogo from "@/assets/payment-logos/google-pay-logo.png";
+import type { VariantType } from "../../types";
+
+const PAYMENT_LOGOS = [
+  { src: visaLogo, alt: "Visa" },
+  { src: mastercardLogo, alt: "Mastercard" },
+  { src: verveLogo, alt: "Verve" },
+  { src: applePayLogo, alt: "Apple Pay" },
+  { src: googlePayLogo, alt: "Google Pay" },
+] as const;
+
+const VARIANT_ROW_LABELS: Record<VariantType, string> = {
+  size: "Available Sizes",
+  color: "Available Colors",
+  material: "Material",
+  style: "Style",
+  measurement: "Measurement",
+};
+
+const getFeatureLabel = (feature: unknown): string => {
+  if (typeof feature === "string") return feature;
+  if (feature && typeof feature === "object") {
+    const f = feature as { name?: string; value?: string };
+    const n = String(f.name ?? "").trim();
+    const v = String(f.value ?? "").trim();
+    return n && v ? `${n}: ${v}` : v || n || "";
+  }
+  return "";
+};
+
+const FEATURE_PILL_ICONS = [Sun, Sparkles, Heart] as const;
+
+const THUMBNAIL_SIZE_PX = 72;
+const THUMBNAIL_GAP_PX = 8;
+const THUMBNAIL_VISIBLE_COUNT = 4;
+const THUMBNAIL_STEP_PX = THUMBNAIL_SIZE_PX + THUMBNAIL_GAP_PX;
+const THUMBNAIL_VIEWPORT_HEIGHT_PX =
+  THUMBNAIL_VISIBLE_COUNT * THUMBNAIL_SIZE_PX +
+  (THUMBNAIL_VISIBLE_COUNT - 1) * THUMBNAIL_GAP_PX;
 
 const ProductDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -69,16 +119,36 @@ const ProductDetailPage: React.FC = () => {
   // Fetch ratings from API
   const { reviews: apiReviews } = useProductRatings(id || null);
   
-  // Use API reviews first, then fallback to product reviews
-  const displayReviews = apiReviews || product?.reviews;
+  const hasRealReviews = Boolean(apiReviews && apiReviews.total > 0);
+  const displayReviews = hasRealReviews ? apiReviews : null;
 
   const [selectedImage, setSelectedImage] = useState(0);
   const [selectedColor, setSelectedColor] = useState<string>("");
   const [selectedSize, setSelectedSize] = useState<string>("");
   const [quantity, setQuantity] = useState(1);
   const [activeDetailTab, setActiveDetailTab] = useState<string>("description");
-  
+  const thumbnailRef = useRef<HTMLDivElement>(null);
+  const relatedScrollRef = useRef<HTMLDivElement>(null);
+
   const isWishlisted = product ? isItemInWishlist(product.id) : false;
+
+  const scrollThumbnails = (direction: "up" | "down") => {
+    const container = thumbnailRef.current;
+    if (!container) return;
+    container.scrollBy({
+      top: direction === "up" ? -THUMBNAIL_STEP_PX : THUMBNAIL_STEP_PX,
+      behavior: "smooth",
+    });
+  };
+
+  const scrollRelated = (direction: "left" | "right") => {
+    const container = relatedScrollRef.current;
+    if (!container) return;
+    container.scrollBy({
+      left: direction === "left" ? -container.clientWidth * 0.8 : container.clientWidth * 0.8,
+      behavior: "smooth",
+    });
+  };
 
   // Set default selections when product loads
   useEffect(() => {
@@ -90,11 +160,11 @@ const ProductDetailPage: React.FC = () => {
         setSelectedColor(colorVariant.options[0].id);
       }
 
-      const sizeVariant = product.variants.find(
-        (v) => v.type === "size"
-      );
-      if (sizeVariant && sizeVariant.options.length > 0) {
-        setSelectedSize(sizeVariant.options[0].id);
+      const sizeVariant = product.variants.find((v) => v.type === "size");
+      const measurementVariant = product.variants.find((v) => v.type === "measurement");
+      const selectVariant = sizeVariant ?? measurementVariant;
+      if (selectVariant && selectVariant.options.length > 0) {
+        setSelectedSize(selectVariant.options[0].id);
       }
     }
   }, [product]);
@@ -115,9 +185,12 @@ const ProductDetailPage: React.FC = () => {
         const opt = colorVariant.options.find((o) => o.id === selectedColor);
         if (opt) selectedVariants.color = opt.value;
       }
-      if (sizeVariant && selectedSize) {
-        const opt = sizeVariant.options.find((o) => o.id === selectedSize);
-        if (opt) selectedVariants.size = opt.value;
+      const selectVariant =
+        product.variants?.find((v) => v.type === "size") ??
+        product.variants?.find((v) => v.type === "measurement");
+      if (selectVariant && selectedSize) {
+        const opt = selectVariant.options.find((o) => o.id === selectedSize);
+        if (opt) selectedVariants[selectVariant.type] = opt.value;
       }
 
       await addToCart(
@@ -149,9 +222,12 @@ const ProductDetailPage: React.FC = () => {
         const opt = colorVariant.options.find((o) => o.id === selectedColor);
         if (opt) selectedVariants.color = opt.value;
       }
-      if (sizeVariant && selectedSize) {
-        const opt = sizeVariant.options.find((o) => o.id === selectedSize);
-        if (opt) selectedVariants.size = opt.value;
+      const selectVariant =
+        product.variants?.find((v) => v.type === "size") ??
+        product.variants?.find((v) => v.type === "measurement");
+      if (selectVariant && selectedSize) {
+        const opt = selectVariant.options.find((o) => o.id === selectedSize);
+        if (opt) selectedVariants[selectVariant.type] = opt.value;
       }
 
       await addToCart(
@@ -229,7 +305,7 @@ const ProductDetailPage: React.FC = () => {
       finalList = candidates;
     }
 
-    return finalList.slice(0, 4);
+    return finalList.slice(0, 8);
   }, [product, relatedProducts]);
 
   const renderStars = (rating: number) => {
@@ -264,8 +340,10 @@ const ProductDetailPage: React.FC = () => {
   }
 
   const breadcrumbItems = [
-    { label: "Products", href: "/products" },
-    ...(product ? [{ label: product.name, isCurrentPage: true }] : []),
+    ...(product.categoryName
+      ? [{ label: product.categoryName, href: `/category/${product.categoryId}` }]
+      : [{ label: "Products", href: "/products" }]),
+    { label: product.name, isCurrentPage: true },
   ];
 
   const colorVariant = product.variants?.find((v) => v.type === "color");
@@ -281,225 +359,449 @@ const ProductDetailPage: React.FC = () => {
       ? product.images.gallery
       : [product.images.main];
 
+  const isNumericOnly = (text: string) => /^\d+(\.\d+)?$/.test(text.trim());
+  const isSpecFeatureName = (name: string) =>
+    /weight|size|storage|capacity|dimension|measure|ram|memory|volume|variant/i.test(name);
+
+  const highlightPills: string[] = [];
+  const featureVariationRows: { label: string; value: string }[] = [];
+
+  (product.features ?? []).forEach((feature) => {
+    if (feature && typeof feature === "object" && "name" in feature && "value" in feature) {
+      const label = String((feature as { name?: string }).name ?? "").trim();
+      const value = String((feature as { value?: string }).value ?? "").trim();
+      if (label && value) {
+        if (isSpecFeatureName(label) || isNumericOnly(value)) {
+          featureVariationRows.push({ label, value });
+          return;
+        }
+      }
+    }
+    const text = getFeatureLabel(feature);
+    if (text && !isNumericOnly(text)) {
+      highlightPills.push(text);
+    }
+  });
+
+  const tagPills =
+    highlightPills.length === 0
+      ? (product.tags ?? []).filter((tag) => tag && !isNumericOnly(tag)).slice(0, 3)
+      : [];
+  const pillItems = [...highlightPills, ...tagPills].slice(0, 3);
+  const shortDescription =
+    product.shortDescription ||
+    (product.description.length > 200
+      ? `${product.description.slice(0, 200).trim()}...`
+      : product.description);
+  const estimatedDelivery =
+    product.shipping.estimatedDelivery || "2 - 4 business days";
+  const reviewCount = displayReviews?.total ?? 0;
+
+  const variationRows: { label: string; value: string }[] = [...featureVariationRows];
+  product.variants?.forEach((variant) => {
+    const values = variant.options
+      .map((option) =>
+        variant.type === "color" ? option.name || option.value : option.value
+      )
+      .join(", ");
+    if (!values) return;
+
+    const optionGroupName = variant.options[0]?.name?.trim();
+    const sharedOptionName =
+      optionGroupName &&
+      variant.options.every((option) => option.name === variant.options[0].name);
+    const label =
+      sharedOptionName && isSpecFeatureName(optionGroupName)
+        ? optionGroupName
+        : VARIANT_ROW_LABELS[variant.type];
+
+    const existing = variationRows.find(
+      (row) => row.label.toLowerCase() === label.toLowerCase()
+    );
+    if (existing) {
+      existing.value = values;
+    } else {
+      variationRows.push({ label, value: values });
+    }
+  });
+  const measurementVariant = product.variants?.find((v) => v.type === "measurement");
+  const sidebarSelectVariant = sizeVariant ?? measurementVariant;
+  const formattedWeight =
+    product.shipping.weight != null && product.shipping.weight > 0
+      ? `${product.shipping.weight.toFixed(2).replace(/\.00$/, "")} KG`
+      : null;
+  const formatSidebarOptionLabel = (value: string) => {
+    const v = value.trim();
+    if (v.startsWith("(") && v.endsWith(")")) return v;
+    return `(${v})`;
+  };
+
+  const showThumbnailArrows = imageGallery.length > THUMBNAIL_VISIBLE_COUNT;
+  const thumbnailViewportHeight = THUMBNAIL_VIEWPORT_HEIGHT_PX;
+
   return (
-    <div className="min-h-screen bg-gray-50 max-w-[960px] lg:max-w-7xl 2xl:max-w-[1550px] mx-auto">
-      <div className=" mx-auto px-4 py-6 min-h-[70vh]">
-        <Breadcrumb items={breadcrumbItems} className="mb-6" />
+    <div className="min-h-screen bg-white max-w-[960px] lg:max-w-7xl 2xl:max-w-[1550px] mx-auto">
+      <div className="mx-auto px-4 py-4 sm:py-6 min-h-[70vh]">
+        <Breadcrumb items={breadcrumbItems} className="mb-4 sm:mb-6 text-gray-500" />
 
-        <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 mb-8">
-          <div className="xl:col-span-6">
-            <div className="grid grid-cols-1 md:grid-cols-[88px_1fr] gap-4">
-              <div className="order-2 md:order-1">
-                <div className="flex md:flex-col gap-2 overflow-x-auto md:overflow-y-auto md:max-h-[580px]">
-                  {imageGallery.map((image, index) => (
+        <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 lg:gap-8 mb-8">
+          {/* Image gallery */}
+          <div className="xl:col-span-5">
+            <div className="flex gap-3 sm:gap-4">
+              {imageGallery.length > 1 && (
+                <div className="hidden sm:flex flex-col items-center gap-1 flex-shrink-0">
+                  {showThumbnailArrows && (
                     <button
-                      key={index}
-                      onClick={() => setSelectedImage(index)}
-                      className={cn(
-                        "flex-shrink-0 w-20 h-20 md:w-full md:h-20 rounded-lg border-2 overflow-hidden bg-white",
-                        selectedImage === index ? "border-primary" : "border-gray-200"
-                      )}
+                      type="button"
+                      onClick={() => scrollThumbnails("up")}
+                      className="p-1 rounded border border-gray-200 text-gray-500 hover:bg-gray-50"
+                      aria-label="Scroll thumbnails up"
                     >
-                      <Image
-                        src={image}
-                        alt={`${product.name} view ${index + 1}`}
-                        className="w-full h-full object-top"
-                        aspectRatio="auto"
-                        objectFit="contain"
-                        lazy={false}
-                      />
+                      <ChevronUp className="w-4 h-4" />
                     </button>
-                  ))}
+                  )}
+                  <div
+                    ref={thumbnailRef}
+                    style={{ height: thumbnailViewportHeight }}
+                    className={cn(
+                      "flex w-[72px] flex-col gap-2",
+                      showThumbnailArrows ? "overflow-y-auto scrollbar-hide" : "overflow-hidden"
+                    )}
+                  >
+                    {imageGallery.map((image, index) => (
+                      <button
+                        key={index}
+                        type="button"
+                        onClick={() => setSelectedImage(index)}
+                        className={cn(
+                          "flex-shrink-0 rounded-lg border-2 overflow-hidden bg-white",
+                          selectedImage === index
+                            ? "border-[#28a745]"
+                            : "border-gray-200 hover:border-gray-300"
+                        )}
+                        style={{ width: THUMBNAIL_SIZE_PX, height: THUMBNAIL_SIZE_PX }}
+                      >
+                        <Image
+                          src={image}
+                          alt={`${product.name} view ${index + 1}`}
+                          className="w-full h-full object-contain"
+                          aspectRatio="auto"
+                          objectFit="contain"
+                          lazy={false}
+                        />
+                      </button>
+                    ))}
+                  </div>
+                  {showThumbnailArrows && (
+                    <button
+                      type="button"
+                      onClick={() => scrollThumbnails("down")}
+                      className="p-1 rounded border border-gray-200 text-gray-500 hover:bg-gray-50"
+                      aria-label="Scroll thumbnails down"
+                    >
+                      <ChevronDown className="w-4 h-4" />
+                    </button>
+                  )}
                 </div>
-              </div>
+              )}
 
-              <div className="order-1 md:order-2 aspect-square w-full max-w-[min(100%,580px)] md:max-w-[580px] bg-white rounded-lg border overflow-hidden relative">
-                {discount && (
-                  <Badge className="absolute top-3 right-3 z-10 bg-primary text-white">
-                    -{formatDiscountPercentage(discount.percentage)}%
-                  </Badge>
+              <div className="flex-1 min-w-0">
+                <div className="aspect-square w-full max-w-[520px] mx-auto bg-white rounded-xl border border-gray-200 overflow-hidden relative">
+                  {discount && (
+                    <Badge className="absolute top-3 right-3 z-10 bg-[#28a745] text-white">
+                      -{formatDiscountPercentage(discount.percentage)}%
+                    </Badge>
+                  )}
+                  <Image
+                    src={imageGallery[selectedImage] || product.images.main}
+                    alt={product.images.alt}
+                    className="w-full h-full object-contain p-4"
+                    aspectRatio="auto"
+                    objectFit="contain"
+                    lazy={false}
+                  />
+                  <div className="absolute bottom-3 right-3 p-2 rounded-full bg-white/90 border border-gray-200 text-gray-600">
+                    <ZoomIn className="w-4 h-4" aria-hidden />
+                  </div>
+                </div>
+
+                {imageGallery.length > 1 && (
+                  <div className="flex sm:hidden gap-2 mt-3 overflow-x-auto scrollbar-hide pb-1">
+                    {imageGallery.map((image, index) => (
+                      <button
+                        key={index}
+                        type="button"
+                        onClick={() => setSelectedImage(index)}
+                        className={cn(
+                          "flex-shrink-0 w-16 h-16 rounded-lg border-2 overflow-hidden bg-white",
+                          selectedImage === index ? "border-[#28a745]" : "border-gray-200"
+                        )}
+                      >
+                        <Image
+                          src={image}
+                          alt={`${product.name} view ${index + 1}`}
+                          className="w-full h-full object-contain"
+                          aspectRatio="auto"
+                          objectFit="contain"
+                          lazy={false}
+                        />
+                      </button>
+                    ))}
+                  </div>
                 )}
-                <Image
-                  src={imageGallery[selectedImage] || product.images.main}
-                  alt={product.images.alt}
-                  className="w-full h-full object-top"
-                  aspectRatio="auto"
-                  objectFit="contain"
-                  lazy={false}
-                />
               </div>
             </div>
           </div>
 
+          {/* Product information */}
           <div className="xl:col-span-4">
-            <Card className="h-full border-0 shadow-none">
-              <CardContent className="p-5 space-y-5">
-                <div>
-                  <h1 className="text-2xl font-bold text-gray-900">{product.name}</h1>
-                  <div className="mt-2">
-                    {product.vendorId ? (
-                      <Link
-                        to={`/vendor/${product.vendorId}`}
-                        className="flex items-center gap-2 hover:opacity-80 transition-opacity"
-                      >
-                        {product.vendorLogo ? (
-                          <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0 border border-gray-200">
-                            <Image
-                              src={product.vendorLogo}
-                              alt={product.storeName || "Vendor"}
-                              className="w-full h-full object-cover"
-                            />
-                          </div>
-                        ) : (
-                          <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center flex-shrink-0">
-                            <span className="text-white text-sm font-bold">
-                              {product.storeName
-                                ? product.storeName.charAt(0).toUpperCase()
-                                : "9J"}
-                            </span>
-                          </div>
-                        )}
-                        <div>
-                          <p className="font-medium text-gray-900 hover:text-primary transition-colors">
-                            {product.storeName || "9jaCart"}
-                          </p>
-                          <p className="text-xs text-gray-500">Nigeria</p>
-                        </div>
-                      </Link>
-                    ) : (
-                      <p className="text-sm text-gray-600">{product.storeName || "9jaCart"}</p>
-                    )}
-                  </div>
-                </div>
+            <div className="space-y-4">
+              {product.flags?.bestseller && (
+                <Badge className="bg-[#e8f5e9] text-[#1E4700] hover:bg-[#e8f5e9] border-0 font-medium">
+                  Best Seller
+                </Badge>
+              )}
+              {!product.flags?.bestseller && product.flags?.featured && (
+                <Badge className="bg-[#e8f5e9] text-[#1E4700] hover:bg-[#e8f5e9] border-0 font-medium">
+                  Featured
+                </Badge>
+              )}
 
-                {displayReviews && (
-                  <div className="flex items-center gap-2 text-sm">
-                    <div className="flex items-center">{renderStars(displayReviews.average)}</div>
-                    <span className="text-gray-600">({displayReviews.total} Reviews)</span>
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 leading-tight">
+                {product.name}
+              </h1>
+
+              <div>
+                {product.vendorId ? (
+                  <Link
+                    to={`/vendor/${product.vendorId}`}
+                    className="inline-flex items-center gap-2 hover:opacity-80 transition-opacity"
+                  >
+                    {product.vendorLogo ? (
+                      <div className="w-9 h-9 rounded-full overflow-hidden flex-shrink-0 border border-gray-200">
+                        <Image
+                          src={product.vendorLogo}
+                          alt={product.storeName || "Vendor"}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    ) : (
+                      <div className="w-9 h-9 bg-[#004d2c] rounded-full flex items-center justify-center flex-shrink-0">
+                        <span className="text-white text-sm font-bold">
+                          {product.storeName
+                            ? product.storeName.charAt(0).toUpperCase()
+                            : "9J"}
+                        </span>
+                      </div>
+                    )}
+                    <div>
+                      <p className="font-semibold text-gray-900 hover:text-primary transition-colors flex items-center gap-1">
+                        {product.storeName || "9jaCart"}
+                        <BadgeCheck className="w-4 h-4 text-[#28a745]" />
+                      </p>
+                      <p className="text-xs text-gray-500">Nigeria</p>
+                    </div>
+                  </Link>
+                ) : (
+                  <p className="text-sm text-gray-600">{product.storeName || "9jaCart"}</p>
+                )}
+              </div>
+
+              {hasRealReviews && displayReviews ? (
+                <div className="flex items-center gap-2 text-sm">
+                  <div className="flex items-center">{renderStars(displayReviews.average)}</div>
+                  <span className="font-medium text-gray-900">
+                    {displayReviews.average.toFixed(1)}
+                  </span>
+                  <span className="text-gray-500">({displayReviews.total} Reviews)</span>
+                </div>
+              ) : (
+                <p className="text-sm text-gray-500 italic">Be the first to review</p>
+              )}
+
+              <div className="space-y-1">
+                <div className="flex items-baseline gap-2 flex-wrap">
+                  <span className="text-3xl font-bold text-[#28a745]">
+                    {formatPrice(currentPrice)}
+                  </span>
+                  {originalPrice && (
+                    <span className="text-lg text-gray-400 line-through">
+                      {formatPrice(originalPrice)}
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-3 text-sm">
+                  <span className="flex items-center gap-1.5 text-[#28a745] font-medium">
+                    <span className="w-2 h-2 rounded-full bg-[#28a745]" />
+                    {product.inventory.inStock ? "In Stock" : "Out of Stock"}
+                  </span>
+                  {product.inventory.inStock && (
+                    <span className="text-gray-500">Ready to ship</span>
+                  )}
+                </div>
+              </div>
+
+              <p className="text-sm text-gray-600 leading-relaxed">{shortDescription}</p>
+
+              {pillItems.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {pillItems.map((pill, index) => {
+                    const Icon = FEATURE_PILL_ICONS[index % FEATURE_PILL_ICONS.length];
+                    return (
+                      <span
+                        key={index}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-gray-200 bg-gray-50 text-xs font-medium text-gray-700"
+                      >
+                        <Icon className="w-3.5 h-3.5 text-[#28a745]" />
+                        {pill}
+                      </span>
+                    );
+                  })}
+                </div>
+              )}
+
+              {variationRows.length > 0 && (
+                <div className="rounded-lg border border-gray-200 divide-y divide-gray-100 text-sm">
+                  {variationRows.map((row) => (
+                    <div key={row.label} className="flex px-4 py-2.5">
+                      <span className="w-36 flex-shrink-0 text-gray-500">{row.label}</span>
+                      <span className="text-gray-900 font-medium">{row.value}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="rounded-lg border border-gray-200 divide-y divide-gray-100 text-sm">
+                {product.categoryName && (
+                  <div className="flex px-4 py-2.5">
+                    <span className="w-36 flex-shrink-0 text-gray-500">Category</span>
+                    <Link
+                      to={`/category/${product.categoryId}`}
+                      className="text-gray-900 font-medium hover:text-primary"
+                    >
+                      {product.categoryName}
+                    </Link>
                   </div>
                 )}
-
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <span className="text-3xl font-bold text-gray-900">
-                      {formatPrice(currentPrice)}
-                    </span>
-                    {originalPrice && (
-                      <span className="text-base text-gray-500 line-through">
-                        {formatPrice(originalPrice)}
-                      </span>
-                    )}
+                {product.brand && (
+                  <div className="flex px-4 py-2.5">
+                    <span className="w-36 flex-shrink-0 text-gray-500">Brand</span>
+                    <span className="text-gray-900 font-medium">{product.brand}</span>
                   </div>
-                  <p className="text-sm text-emerald-700">
-                    {product.inventory.inStock ? "In Stock" : "Out of Stock"}
+                )}
+                <div className="flex px-4 py-2.5">
+                  <span className="w-36 flex-shrink-0 text-gray-500">Country of Origin</span>
+                  <span className="text-gray-900 font-medium">Nigeria</span>
+                </div>
+                {product.sku && (
+                  <div className="flex px-4 py-2.5">
+                    <span className="w-36 flex-shrink-0 text-gray-500">SKU</span>
+                    <span className="text-gray-900 font-medium">{product.sku}</span>
+                  </div>
+                )}
+              </div>
+
+              {colorVariant && (
+                <div className="space-y-2">
+                  <h3 className="text-sm font-medium text-gray-900">Color</h3>
+                  <div className="flex gap-2">
+                    {colorVariant.options.map((option) => (
+                      <button
+                        key={option.id}
+                        type="button"
+                        onClick={() => setSelectedColor(option.id)}
+                        className={cn(
+                          "w-8 h-8 rounded-full border-2 transition-all",
+                          selectedColor === option.id ? "border-gray-900" : "border-gray-300"
+                        )}
+                        style={{ backgroundColor: option.hex }}
+                        title={option.name}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Purchase sidebar */}
+          <div className="xl:col-span-3 xl:sticky xl:top-4 xl:self-start">
+            <Card className="border border-gray-200 shadow-sm">
+              <CardContent className="p-5 space-y-4">
+                <div>
+                  <p className="text-2xl font-bold text-[#28a745]">{formatPrice(currentPrice)}</p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Free delivery on orders over ₦20,000
+                  </p>
+                  <p className="text-xs text-gray-600 mt-0.5">
+                    Estimated delivery: {estimatedDelivery}
                   </p>
                 </div>
 
-                {sizeVariant && (
-                  <div className="space-y-2">
-                    <h3 className="text-sm font-medium text-gray-900">Storage Capacity</h3>
-                    <div className="flex flex-wrap gap-2">
-                      {sizeVariant.options.map((option) => (
-                        <button
-                          key={option.id}
-                          onClick={() => setSelectedSize(option.id)}
-                          className={cn(
-                            "px-3 py-1.5 border rounded-md text-xs font-medium transition-colors",
-                            selectedSize === option.id
-                              ? "border-gray-900 bg-gray-900 text-white"
-                              : "border-gray-300 text-gray-700 hover:border-gray-400"
-                          )}
+                <div className="space-y-2">
+                  <p className="text-sm font-medium text-gray-900">Quantity</p>
+                  <div className="flex gap-2">
+                    <div className="flex shrink-0 items-center overflow-hidden rounded-lg border border-gray-200">
+                      <button
+                        type="button"
+                        onClick={() => handleQuantityChange(-1)}
+                        className="flex justify-center p-2.5 transition-colors hover:bg-gray-50"
+                        disabled={quantity <= 1}
+                      >
+                        <Minus className="w-4 h-4" />
+                      </button>
+                      <span className="min-w-[2.5rem] px-2 py-2 text-center font-semibold">
+                        {quantity}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleQuantityChange(1)}
+                        className="flex justify-center p-2.5 transition-colors hover:bg-gray-50"
+                      >
+                        <Plus className="w-4 h-4" />
+                      </button>
+                    </div>
+
+                    {sidebarSelectVariant ? (
+                      <div className="min-w-0 flex-1">
+                        <label htmlFor="product-variant" className="sr-only">
+                          Select {sidebarSelectVariant.type}
+                        </label>
+                        <select
+                          id="product-variant"
+                          value={selectedSize}
+                          onChange={(e) => setSelectedSize(e.target.value)}
+                          className="h-full w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
                         >
-                          {option.value.toUpperCase()}
-                        </button>
-                      ))}
-                    </div>
+                          {sidebarSelectVariant.options.map((option) => (
+                            <option key={option.id} value={option.id}>
+                              {formatSidebarOptionLabel(option.value)}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    ) : formattedWeight ? (
+                      <div className="flex min-w-0 flex-1 items-center justify-center rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm font-medium text-gray-700">
+                        ({formattedWeight})
+                      </div>
+                    ) : null}
                   </div>
-                )}
-
-                {colorVariant && (
-                  <div className="space-y-2">
-                    <h3 className="text-sm font-medium text-gray-900">Color</h3>
-                    <div className="flex gap-2">
-                      {colorVariant.options.map((option) => (
-                        <button
-                          key={option.id}
-                          onClick={() => setSelectedColor(option.id)}
-                          className={cn(
-                            "w-7 h-7 rounded border-2 transition-all",
-                            selectedColor === option.id ? "border-gray-900" : "border-gray-300"
-                          )}
-                          style={{ backgroundColor: option.hex }}
-                          title={option.name}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {product.features && product.features.length > 0 && (
-                  <div>
-                    <p className="text-sm font-medium text-gray-900 mb-2">Highlights</p>
-                    <ul className="space-y-1.5">
-                      {product.features.slice(0, 5).map((feature, index) => (
-                        <li key={index} className="text-xs text-gray-600 flex items-start gap-2">
-                          <span className="mt-1 inline-block w-1.5 h-1.5 rounded-full bg-primary" />
-                          <span>
-                            {(() => {
-                              if (typeof feature === "string") return feature;
-                              if (feature && typeof feature === "object") {
-                                const f = feature as { name?: string; value?: string };
-                                const n = String(f.name ?? "").trim();
-                                const v = String(f.value ?? "").trim();
-                                return n && v ? `${n}: ${v}` : v || n || "";
-                              }
-                              return "";
-                            })()}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-
-          <div className="xl:col-span-2">
-            <Card>
-              <CardContent className="p-4 space-y-4">
-                <div>
-                  <p className="text-xs text-gray-500">On orders over ₦20,000</p>
-                  <p className="text-3xl font-bold text-[#1E4700] mt-1">{formatPrice(currentPrice)}</p>
                 </div>
-                <div className="flex items-center border rounded-md">
-                  <button
-                    onClick={() => handleQuantityChange(-1)}
-                    className="p-2 hover:bg-gray-100 transition-colors"
-                    disabled={quantity <= 1}
-                  >
-                    <Minus className="w-4 h-4" />
-                  </button>
-                  <span className="px-4 py-2 font-medium">{quantity}</span>
-                  <button
-                    onClick={() => handleQuantityChange(1)}
-                    className="p-2 hover:bg-gray-100 transition-colors"
-                  >
-                    <Plus className="w-4 h-4" />
-                  </button>
-                </div>
+
                 <Button
                   onClick={handleAddToCart}
-                  className="w-full bg-[#2f7d32] hover:bg-[#2f7d32]/90 text-white"
+                  className="w-full bg-[#28a745] hover:bg-[#28a745]/90 text-white"
                   size="lg"
+                  disabled={!product.inventory.inStock}
                 >
                   <ShoppingCart className="w-5 h-5 mr-2" />
                   Add to Cart
                 </Button>
                 <Button
                   onClick={handleCheckout}
-                  className="w-full bg-[#0b3d2e] hover:bg-[#0b3d2e]/90 text-white"
+                  className="w-full bg-[#004d2c] hover:bg-[#004d2c]/90 text-white"
                   size="lg"
+                  disabled={!product.inventory.inStock}
                 >
                   Buy Now
                 </Button>
@@ -512,35 +814,43 @@ const ProductDetailPage: React.FC = () => {
                       addToWishlist(product);
                     }
                   }}
-                  className={cn("w-full", isWishlisted && "text-red-500 border-red-500")}
+                  className={cn(
+                    "w-full border-gray-300",
+                    isWishlisted && "text-red-500 border-red-500"
+                  )}
                 >
                   <Heart className={cn("w-4 h-4 mr-2", isWishlisted && "fill-current")} />
                   Add to Wishlist
                 </Button>
-              </CardContent>
-            </Card>
 
-            <Card className="mt-4">
-              <CardContent className="p-4 space-y-3">
-                <div className="flex items-start gap-2">
-                  <ShieldCheck className="w-4 h-4 text-primary mt-0.5" />
-                  <div>
-                    <p className="text-sm font-medium">Secure Checkout</p>
-                    <p className="text-xs text-gray-600">100% secure payments</p>
+                <div className="pt-3 border-t border-gray-100 space-y-3">
+                  <p className="text-xs text-gray-500 text-center">Guaranteed safe checkout</p>
+                  <div className="grid grid-cols-5 gap-1.5">
+                    {PAYMENT_LOGOS.map(({ src, alt }) => (
+                      <div
+                        key={alt}
+                        className="flex h-9 items-center justify-center rounded border border-gray-200 bg-white px-1"
+                      >
+                        <img
+                          src={src}
+                          alt={alt}
+                          className="max-h-5 max-w-full object-contain"
+                        />
+                      </div>
+                    ))}
                   </div>
-                </div>
-                <div className="flex items-start gap-2">
-                  <RotateCcw className="w-4 h-4 text-primary mt-0.5" />
-                  <div>
-                    <p className="text-sm font-medium">7-Day Returns</p>
-                    <p className="text-xs text-gray-600">Easy return & refund</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-2">
-                  <Headset className="w-4 h-4 text-primary mt-0.5" />
-                  <div>
-                    <p className="text-sm font-medium">24/7 Support</p>
-                    <p className="text-xs text-gray-600">Always here to help</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {[
+                      { icon: ShieldCheck, label: "Secure Checkout" },
+                      { icon: RotateCcw, label: "7-Day Returns" },
+                      { icon: Headset, label: "24/7 Support" },
+                      { icon: BadgeCheck, label: "Trusted Seller" },
+                    ].map(({ icon: Icon, label }) => (
+                      <div key={label} className="flex items-center gap-1.5 text-[10px] text-gray-600">
+                        <Icon className="w-3.5 h-3.5 text-[#28a745] flex-shrink-0" />
+                        <span>{label}</span>
+                      </div>
+                    ))}
                   </div>
                 </div>
               </CardContent>
@@ -548,17 +858,20 @@ const ProductDetailPage: React.FC = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-          <div className="space-y-6 min-w-0">
-            <Card>
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          <div className="lg:col-span-7 min-w-0">
+            <Card className="border border-gray-200 shadow-sm">
               <CardContent className="p-0">
                 <div className="border-b border-gray-200">
-                  <div className="flex overflow-x-auto">
+                  <div className="flex overflow-x-auto scrollbar-hide">
                     {[
                       { id: "description", label: "Description" },
                       { id: "features", label: "Features" },
                       { id: "shipping", label: "Shipping & Returns" },
-                      { id: "rating", label: "Product Rating" },
+                      {
+                        id: "rating",
+                        label: reviewCount > 0 ? `Product Reviews (${reviewCount})` : "Product Reviews",
+                      },
                     ].map((tab) => (
                       <button
                         key={tab.id}
@@ -583,6 +896,36 @@ const ProductDetailPage: React.FC = () => {
                       <p className="text-gray-700 whitespace-pre-line leading-relaxed">
                         {product.description}
                       </p>
+                      {product.features && product.features.length > 0 && (
+                        <ul className="space-y-2.5 pt-2">
+                          {product.features.slice(0, 6).map((feature, index) => {
+                            const label = getFeatureLabel(feature);
+                            if (!label) return null;
+                            return (
+                              <li key={index} className="flex items-start gap-2.5 text-gray-700">
+                                <Check className="w-4 h-4 text-[#28a745] mt-0.5 flex-shrink-0" />
+                                <span>{label}</span>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      )}
+                      {product.specifications &&
+                        Object.keys(product.specifications).length > 0 && (
+                          <div className="pt-4 border-t border-gray-100">
+                            <h4 className="font-semibold text-gray-900 mb-3">Specifications</h4>
+                            <dl className="space-y-2 text-sm">
+                              {Object.entries(product.specifications).map(([key, value]) => (
+                                <div key={key} className="flex gap-4">
+                                  <dt className="w-36 flex-shrink-0 text-gray-500 capitalize">
+                                    {key.replace(/([A-Z])/g, " $1").trim()}
+                                  </dt>
+                                  <dd className="text-gray-900 font-medium">{String(value)}</dd>
+                                </div>
+                              ))}
+                            </dl>
+                          </div>
+                        )}
                     </div>
                   )}
 
@@ -591,23 +934,24 @@ const ProductDetailPage: React.FC = () => {
                       {product.features && product.features.length > 0 ? (
                         <ul className="space-y-3">
                           {product.features.map((feature, index) => {
-                            let label = "";
-                            if (typeof feature === "string") {
-                              label = feature;
-                            } else if (feature && typeof feature === "object") {
-                              const f = feature as { name?: string; value?: string };
-                              const n = String(f.name ?? "").trim();
-                              const v = String(f.value ?? "").trim();
-                              label = n && v ? `${n}: ${v}` : v || n || "";
-                            }
+                            const label = getFeatureLabel(feature);
                             if (!label) return null;
                             return (
                               <li key={index} className="flex items-start gap-3">
-                                <div className="w-1.5 h-1.5 rounded-full bg-primary mt-2 flex-shrink-0" />
+                                <Check className="w-4 h-4 text-[#28a745] mt-0.5 flex-shrink-0" />
                                 <span className="text-gray-700">{label}</span>
                               </li>
                             );
                           })}
+                        </ul>
+                      ) : product.tags && product.tags.length > 0 ? (
+                        <ul className="space-y-3">
+                          {product.tags.map((tag, index) => (
+                            <li key={index} className="flex items-start gap-3">
+                              <Check className="w-4 h-4 text-[#28a745] mt-0.5 flex-shrink-0" />
+                              <span className="text-gray-700">{tag}</span>
+                            </li>
+                          ))}
                         </ul>
                       ) : (
                         <p className="text-gray-600">No features listed for this product.</p>
@@ -707,7 +1051,7 @@ const ProductDetailPage: React.FC = () => {
                         </div>
                       ) : (
                         <div className="text-center py-8">
-                          <p className="text-gray-600 mb-4">No ratings yet</p>
+                          <p className="text-gray-600 mb-4">Be the first to review</p>
                           {isAuthenticated && (
                             <Button
                               variant="outline"
@@ -727,25 +1071,57 @@ const ProductDetailPage: React.FC = () => {
             </Card>
           </div>
 
-          <div className="min-w-0">
+          <div className="lg:col-span-5 min-w-0">
             {filteredRelatedProducts.length > 0 && (
-              <Card>
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <SectionHeader text="Related Items" subtitle="You may also like these" />
-                    <Link to="/products" className="text-sm text-primary hover:underline">
+              <Card className="border border-gray-200 shadow-sm h-full">
+                <CardContent className="p-4 sm:p-5">
+                  <div className="flex items-center justify-between mb-4 gap-2">
+                    <h2 className="text-lg font-bold text-gray-900">You may also like</h2>
+                    <Link
+                      to="/products"
+                      className="text-sm text-[#28a745] hover:underline font-medium whitespace-nowrap"
+                    >
                       View all
                     </Link>
                   </div>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-                    {filteredRelatedProducts.slice(0, 8).map((relatedProduct) => (
-                      <ProductCard
-                        key={relatedProduct.id}
-                        product={normalizeProductImages(relatedProduct)}
-                        showQuickAdd
-                        className="group cursor-pointer w-full"
-                      />
-                    ))}
+                  <div className="relative">
+                    {filteredRelatedProducts.length > 1 && (
+                      <>
+                        <button
+                          type="button"
+                          aria-label="Scroll related products left"
+                          onClick={() => scrollRelated("left")}
+                          className="absolute left-0 top-1/2 z-10 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-700 shadow-sm hover:bg-gray-50"
+                        >
+                          <ChevronLeft className="h-4 w-4" />
+                        </button>
+                        <button
+                          type="button"
+                          aria-label="Scroll related products right"
+                          onClick={() => scrollRelated("right")}
+                          className="absolute right-0 top-1/2 z-10 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-700 shadow-sm hover:bg-gray-50"
+                        >
+                          <ChevronRight className="h-4 w-4" />
+                        </button>
+                      </>
+                    )}
+                    <div
+                      ref={relatedScrollRef}
+                      className="overflow-x-auto scrollbar-hide px-6"
+                    >
+                      <div className="flex gap-3 w-max min-w-full pb-1">
+                        {filteredRelatedProducts.map((relatedProduct) => (
+                          <div
+                            key={relatedProduct.id}
+                            className="w-[220px] sm:w-[240px] flex-shrink-0"
+                          >
+                            <RelatedProductCard
+                              product={normalizeProductImages(relatedProduct)}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -760,43 +1136,45 @@ const ProductDetailPage: React.FC = () => {
           className="mt-6 pt-6 rounded-lg border border-gray-200 bg-white p-4 sm:p-6 space-y-4"
         />
 
-        <section className="mt-8 mb-4 rounded-lg border bg-white px-4 py-4">
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-            <div className="flex items-center gap-2">
-              <Truck className="w-5 h-5 text-primary" />
-              <div>
-                <p className="text-sm font-semibold">Free Delivery</p>
-                <p className="text-xs text-gray-500">On orders over ₦20,000</p>
+        <section className="mt-8 mb-4 rounded-xl border border-gray-200 bg-[#f8faf8] px-4 py-5 sm:px-6">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 lg:gap-6">
+            {[
+              {
+                icon: Truck,
+                title: "Free Delivery",
+                subtitle: "On orders over ₦20,000",
+              },
+              {
+                icon: RotateCcw,
+                title: "Easy Returns",
+                subtitle: "7-day return policy",
+              },
+              {
+                icon: ShieldCheck,
+                title: "Secure Payments",
+                subtitle: "100% secure payments",
+              },
+              {
+                icon: Headset,
+                title: "24/7 Support",
+                subtitle: "Always ready to help",
+              },
+              {
+                icon: BadgeCheck,
+                title: "Trusted by Thousands",
+                subtitle: "50,000+ happy customers",
+              },
+            ].map(({ icon: Icon, title, subtitle }) => (
+              <div key={title} className="flex items-center gap-3">
+                <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-white border border-gray-200">
+                  <Icon className="w-5 h-5 text-[#28a745]" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-gray-900">{title}</p>
+                  <p className="text-xs text-gray-500">{subtitle}</p>
+                </div>
               </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <RotateCcw className="w-5 h-5 text-primary" />
-              <div>
-                <p className="text-sm font-semibold">Easy Returns</p>
-                <p className="text-xs text-gray-500">7-day return policy</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <ShieldCheck className="w-5 h-5 text-primary" />
-              <div>
-                <p className="text-sm font-semibold">Secure Payments</p>
-                <p className="text-xs text-gray-500">100% secure payments</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <Headset className="w-5 h-5 text-primary" />
-              <div>
-                <p className="text-sm font-semibold">24/7 Support</p>
-                <p className="text-xs text-gray-500">Always ready to help</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <BadgeCheck className="w-5 h-5 text-primary" />
-              <div>
-                <p className="text-sm font-semibold">Trusted by Thousands</p>
-                <p className="text-xs text-gray-500">50,000+ happy customers</p>
-              </div>
-            </div>
+            ))}
           </div>
         </section>
       </div>

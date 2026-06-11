@@ -224,14 +224,22 @@ export const mapApiProductToProduct = (apiProduct: ApiProductData): Product => {
 
     if (name.includes("color")) {
       type = "color";
-    } else if (name.includes("size")) {
+    } else if (
+      name.includes("size") ||
+      name.includes("storage") ||
+      name.includes("capacity") ||
+      name.includes("ram") ||
+      name.includes("memory")
+    ) {
       type = "size";
-    } else if (name.includes("measure")) {
+    } else if (name.includes("measure") || name.includes("weight")) {
       type = "measurement";
     } else if (name.includes("style")) {
       type = "style";
     } else if (name.includes("material")) {
       type = "material";
+    } else if (variation.name) {
+      type = "measurement";
     }
 
     if (!type) continue;
@@ -262,10 +270,9 @@ export const mapApiProductToProduct = (apiProduct: ApiProductData): Product => {
         }))
       : [];
 
-  // Create mock reviews (API doesn't provide reviews)
   const reviews: ProductReviews = {
-    average: 4.0 + Math.random(), // Random rating between 4-5
-    total: Math.floor(Math.random() * 100) + 10, // Random review count
+    average: 0,
+    total: 0,
   };
 
   // Create product flags
@@ -546,8 +553,11 @@ export function mapRecentlyViewedItemToProductSummary(item: RecentlyViewedApiIte
     inventory: { inStock, status },
     images: { main: mainImg, alt: name },
     reviews: {
-      average: typeof item.averageRating === 'number' ? item.averageRating : 4,
-      total: typeof item.totalRatings === 'number' ? item.totalRatings : 1,
+      average:
+        typeof item.averageRating === 'number' && (item.totalRatings ?? 0) > 0
+          ? item.averageRating
+          : 0,
+      total: typeof item.totalRatings === 'number' ? item.totalRatings : 0,
     },
     flags: { featured: false, newArrival: false, bestseller: false },
     vendorId,

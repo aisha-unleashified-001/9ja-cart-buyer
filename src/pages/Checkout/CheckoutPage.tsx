@@ -135,6 +135,7 @@ const CheckoutPage: React.FC = () => {
   const [isRedirectingToPayment, setIsRedirectingToPayment] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState("bank-card");
   const bnplWidgetHandleRef = useRef<WidgetHandle | null>(null);
+  const bnplApplicationIdRef = useRef<string | null>(null);
   // Kept in a ref so the widget callbacks always see the latest version
   // without the widget needing to be re-initialised on every render.
   const handlePlaceOrderRef = useRef<(() => Promise<void>) | null>(null);
@@ -616,6 +617,7 @@ const CheckoutPage: React.FC = () => {
     if (selectedPayment !== "buy-now-pay-later") {
       bnplWidgetHandleRef.current?.close();
       bnplWidgetHandleRef.current = null;
+      bnplApplicationIdRef.current = null;
       return;
     }
 
@@ -647,10 +649,9 @@ const CheckoutPage: React.FC = () => {
       cart: widgetCart,
       ...(prefill && { partnerPrefill: prefill }),
       theme: BNPL_WIDGET_THEME,
-      onApprovalPending: (_applicationId) => {
+      onApprovalPending: (applicationId) => {
         // Place the order after the BNPL application has been submitted.
-        // selectedPayment is still "buy-now-pay-later" at this point so
-        // handlePlaceOrder will map it to "bnpl" for the API call.
+        bnplApplicationIdRef.current = applicationId;
         handlePlaceOrderRef.current?.();
       },
       onClose: () => {
@@ -860,6 +861,10 @@ const CheckoutPage: React.FC = () => {
         billing: billingData,
         orderItems,
         paymentMethod,
+        ...(paymentMethod === "bnpl" &&
+          bnplApplicationIdRef.current && {
+            applicationId: bnplApplicationIdRef.current,
+          }),
         ...(isGuestCheckoutFlow && { guestCheckout: 1 }),
         ...(isGuestCheckoutFlow &&
           guestWantsAccount &&
@@ -897,6 +902,7 @@ const CheckoutPage: React.FC = () => {
         }
 
         await clearAllItems();
+        bnplApplicationIdRef.current = null;
 
         setShowSuccess(true);
         return;

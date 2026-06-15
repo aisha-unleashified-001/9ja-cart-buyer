@@ -28,6 +28,7 @@ export interface CheckoutRequest {
   billing: BillingDetails;
   orderItems: OrderItem[];
   paymentMethod: string;
+  applicationId?: string;
   couponCode?: string;
   guestCheckout?: number;
   createAccount?: number;

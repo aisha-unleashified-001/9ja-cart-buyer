@@ -731,7 +731,7 @@ const ProductDetailPage: React.FC = () => {
                 <div>
                   <p className="text-2xl font-bold text-[#28a745]">{formatPrice(currentPrice)}</p>
                   <p className="text-xs text-gray-500 mt-1">
-                    Free delivery on orders over ₦20,000
+                    Shop Now, Get It Now, Pay Later
                   </p>
                   <p className="text-xs text-gray-600 mt-0.5">
                     Estimated delivery: {estimatedDelivery}
@@ -1141,7 +1141,7 @@ const ProductDetailPage: React.FC = () => {
             {[
               {
                 icon: Truck,
-                title: "Free Delivery",
+                title: "Shop Now, Get It Now, Pay Later",
                 subtitle: "On orders over ₦20,000",
               },
               {

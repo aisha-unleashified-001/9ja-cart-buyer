@@ -38,6 +38,7 @@ import { useProductRatings } from "../../hooks/api/useProductRatings";
 import { productsApi } from "../../api/products";
 // import type { Product } from "../../types";
 import { cn, normalizeProductImages } from "../../lib/utils";
+import { BNPL_MIN_ORDER_NAIRA } from "../../lib/bnplWidget";
 import { formatPrice, formatDiscountPercentage } from "../../lib/productUtils";
 import { RelatedProductCard } from "@/components/Product";
 import RecentlyViewedProductsSection from "@/components/HomePage/RecentlyViewedProductsSection";
@@ -1142,7 +1143,7 @@ const ProductDetailPage: React.FC = () => {
               {
                 icon: Truck,
                 title: "Shop Now, Get It Now, Pay Later",
-                subtitle: "On orders over ₦20,000",
+                subtitle: `On orders over ₦${BNPL_MIN_ORDER_NAIRA.toLocaleString("en-NG")}`,
               },
               {
                 icon: RotateCcw,

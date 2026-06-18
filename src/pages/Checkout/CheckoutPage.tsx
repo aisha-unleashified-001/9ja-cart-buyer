@@ -1088,10 +1088,12 @@ const CheckoutPage: React.FC = () => {
         {/* Guest Checkout Alert */}
         {!isAuthenticated && checkoutAsGuest && (
           <Alert className="mb-6">
-            <User className="w-4 h-4" />
             <div>
-              <p className="font-medium">Checking out as guest</p>
-              <p className="text-sm text-gray-600">
+              <p className="font-medium flex items-center gap-2">
+                <User className="w-4 h-4 flex-shrink-0" />
+                Checking out as guest
+              </p>
+              <p className="text-sm text-gray-600 mt-1">
                 You can{" "}
                 <Link
                   to="/auth/login?redirect=/checkout"

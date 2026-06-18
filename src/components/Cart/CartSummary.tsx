@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Truck, Shield, RotateCcw, AlertCircle } from "lucide-react";
+import { Truck, Shield, ShieldCheck, RotateCcw, Headset, BadgeCheck, AlertCircle } from "lucide-react";
 import { Button, Card, CardContent, Alert, Input } from "../UI";
 import { useCart } from "../../hooks/useCart";
 import { useAuthStore } from "../../store/useAuthStore";
@@ -186,30 +186,18 @@ const CartSummary: React.FC<CartSummaryProps> = ({ className }) => {
         <CardContent className="p-6">
           <h3 className="font-medium text-gray-900 mb-4">Shipping & Returns</h3>
 
-          <div className="space-y-3 text-sm">
-            <div className="flex items-start gap-3">
-              <Truck className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
-              <div>
-                <p className="font-medium text-gray-900">Free Shipping</p>
-                <p className="text-gray-600">On orders over ₦50,000</p>
+          <div className="grid grid-cols-2 gap-2">
+            {[
+              { icon: ShieldCheck, label: "Secure Checkout" },
+              { icon: RotateCcw, label: "7-Day Returns" },
+              { icon: Headset, label: "24/7 Support" },
+              { icon: BadgeCheck, label: "Trusted Seller" },
+            ].map(({ icon: Icon, label }) => (
+              <div key={label} className="flex items-center gap-2 text-sm text-gray-600">
+                <Icon className="w-4 h-4 text-[#28a745] flex-shrink-0" />
+                <span>{label}</span>
               </div>
-            </div>
-
-            <div className="flex items-start gap-3">
-              <RotateCcw className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
-              <div>
-                <p className="font-medium text-gray-900">Easy Returns</p>
-                <p className="text-gray-600">30-day return policy</p>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-3">
-              <Shield className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
-              <div>
-                <p className="font-medium text-gray-900">Secure Payment</p>
-                <p className="text-gray-600">Your payment info is safe</p>
-              </div>
-            </div>
+            ))}
           </div>
         </CardContent>
       </Card>

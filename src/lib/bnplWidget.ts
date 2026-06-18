@@ -13,10 +13,21 @@ export const BNPL_WIDGET_THEME: ThemeOptions = {
 };
 
 /**
+ * NeoCash SessionConfig limits (see @neocash/bnpl-widget `SessionConfig`).
+ * `min_amount_kobo` is the minimum financeable portion after the pay-today deposit.
+ */
+export const BNPL_MIN_FINANCEABLE_NAIRA = 35_000;
+export const BNPL_MIN_PAY_NOW_RATE = 0.2;
+
+/** Minimum cart total (naira) eligible for BNPL: financeable floor ÷ (1 − pay-today rate). */
+export const BNPL_MIN_ORDER_NAIRA = Math.ceil(
+  BNPL_MIN_FINANCEABLE_NAIRA / (1 - BNPL_MIN_PAY_NOW_RATE)
+);
+
+/**
  * Minimum placeholder cart for account-area BNPL setup (widget requires a cart).
- * Amounts are in kobo. NeoCash requires financeable amount (after ~20% pay-today)
- * to be at least ₦35,000 — use ₦50,000 total so 80% financed ≈ ₦40,000.
- * Not a real purchase; only satisfies widget eligibility for onboarding.
+ * Amounts are in kobo. Uses a total above {@link BNPL_MIN_ORDER_NAIRA} so onboarding
+ * always satisfies NeoCash eligibility. Not a real purchase.
  */
 export const BNPL_ACCOUNT_SETUP_CART_NAIRA = 50_000;
 

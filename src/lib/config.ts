@@ -22,6 +22,7 @@ export const config = {
   },
   neocash: {
     publicKey: import.meta.env.VITE_NEOCASH_PUBLIC_KEY || 'pk_test_xxx',
+    assetPrefix: 'https://cdn.neocash.ng/widget/v1/',
   },
   features: {
     // Feature flags for development

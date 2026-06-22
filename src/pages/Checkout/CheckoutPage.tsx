@@ -646,6 +646,7 @@ const CheckoutPage: React.FC = () => {
 
     const handle = initBnplWidget({
       publicKey: config.neocash.publicKey,
+      assetPrefix: config.neocash.assetPrefix,
       cart: widgetCart,
       ...(prefill && { partnerPrefill: prefill }),
       theme: BNPL_WIDGET_THEME,

@@ -65,6 +65,7 @@ const PaymentSection: React.FC = () => {
     try {
       const handle = initBnplWidget({
         publicKey: config.neocash.publicKey,
+        assetPrefix: config.neocash.assetPrefix,
         cart: BNPL_ACCOUNT_SETUP_CART,
         ...(prefill && { partnerPrefill: prefill }),
         theme: BNPL_WIDGET_THEME,

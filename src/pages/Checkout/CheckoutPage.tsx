@@ -60,6 +60,7 @@ interface PaymentMethod {
   name: string;
   icon: React.ReactNode;
   disabled?: boolean;
+  disabledReason?: string;
 }
 
 const CHECKOUT_GUEST_PARAM = "guest";
@@ -146,6 +147,7 @@ const CheckoutPage: React.FC = () => {
   );
   const checkoutAsGuest =
     searchParams.get(CHECKOUT_GUEST_PARAM) === "1" && !isAuthenticated;
+  const isGuestCheckoutFlow = !isAuthenticated && checkoutAsGuest;
 
   const [guestWantsAccount, setGuestWantsAccount] = useState(false);
   const [guestPassword, setGuestPassword] = useState("");
@@ -192,6 +194,41 @@ const CheckoutPage: React.FC = () => {
     phoneNumber: "",
     emailAddress: "",
   });
+
+  const isShippingDetailsComplete = useMemo(() => {
+    return (
+      validateBillingDetails(billingDetails, {
+        phoneOptional: isGuestCheckoutFlow,
+      }).length === 0
+    );
+  }, [isGuestCheckoutFlow, billingDetails]);
+
+  const paymentMethods: PaymentMethod[] = useMemo(
+    () => [
+      {
+        id: "bank-card",
+        name: "Bank/Card",
+        icon: <CreditCard className="w-5 h-5" />,
+        disabled: false,
+      },
+      {
+        id: "cash-on-delivery",
+        name: "Pay on delivery",
+        icon: <Truck className="w-5 h-5" />,
+        disabled: true,
+      },
+      {
+        id: "buy-now-pay-later",
+        name: "Buy Now, Pay Later",
+        icon: <Shield className="w-5 h-5" />,
+        disabled: !isShippingDetailsComplete,
+        disabledReason: !isShippingDetailsComplete
+          ? "Complete shipping details first"
+          : undefined,
+      },
+    ],
+    [isShippingDetailsComplete]
+  );
 
   // Load profile and set up addresses
   useEffect(() => {
@@ -245,33 +282,11 @@ const CheckoutPage: React.FC = () => {
     }
   }, [isAuthenticated, profile, user, checkoutAsGuest, getDefaultAddress, isInitialLoad]);
 
-  const paymentMethods: PaymentMethod[] = [
-    {
-      id: "bank-card",
-      name: "Bank/Card",
-      icon: <CreditCard className="w-5 h-5" />,
-      disabled: false,
-    },
-    {
-      id: "cash-on-delivery",
-      name: "Pay on delivery",
-      icon: <Truck className="w-5 h-5" />,
-      disabled: true,
-    },
-    {
-      id: "buy-now-pay-later",
-      name: "Buy Now, Pay Later",
-      icon: <Shield className="w-5 h-5" />,
-      disabled: false,
-    },
-    // Hidden for now - Emergency Credit
-    // {
-    //   id: "emergency-credit",
-    //   name: "Emergency Credit",
-    //   icon: <Shield className="w-5 h-5" />,
-    //   disabled: true,
-    // },
-  ];
+  useEffect(() => {
+    if (!isShippingDetailsComplete && selectedPayment === "buy-now-pay-later") {
+      setSelectedPayment("bank-card");
+    }
+  }, [isShippingDetailsComplete, selectedPayment]);
 
   // Use filtered values from cart (already exclude unavailable products).
   // When `couponPricingSnapshot` is set, discount is already reflected in `payableSubtotal` (API `cartSummary.total`).
@@ -524,8 +539,6 @@ const CheckoutPage: React.FC = () => {
     return validationErrors.find((error) => error.field === field)?.message;
   };
 
-  const isGuestCheckoutFlow = !isAuthenticated && checkoutAsGuest;
-
   const handleApplyCoupon = async () => {
     const trimmed = couponCode.trim();
     if (!trimmed) {
@@ -614,7 +627,10 @@ const CheckoutPage: React.FC = () => {
   ]);
 
   useEffect(() => {
-    if (selectedPayment !== "buy-now-pay-later") {
+    if (
+      selectedPayment !== "buy-now-pay-later" ||
+      !isShippingDetailsComplete
+    ) {
       bnplWidgetHandleRef.current?.close();
       bnplWidgetHandleRef.current = null;
       bnplApplicationIdRef.current = null;
@@ -952,9 +968,6 @@ const CheckoutPage: React.FC = () => {
   };
 
   const breadcrumbItems = [
-    { label: "Account", href: "/account" },
-    { label: "My Account", href: "/account" },
-    { label: "Product", href: "/products" },
     { label: "View Cart", href: "/cart" },
     { label: "Checkout", isCurrentPage: true },
   ];
@@ -1034,7 +1047,12 @@ const CheckoutPage: React.FC = () => {
                     </Link>
                   </Button>
 
-                  <Button asChild className="w-full" size="lg" variant="outline">
+                  <Button
+                    asChild
+                    className="w-full bg-white border-[#2ac12a] text-gray-900 hover:bg-[#8DEB6E] hover:text-[#1E4700] hover:border-[#2ac12a]"
+                    size="lg"
+                    variant="outline"
+                  >
                     <Link
                       to="/auth/register?redirect=/checkout"
                       className="flex items-center justify-center"
@@ -1046,7 +1064,7 @@ const CheckoutPage: React.FC = () => {
                   <Button
                     type="button"
                     variant="outline"
-                    className="w-full"
+                    className="w-full bg-white border-[#2ac12a] text-gray-900 hover:bg-[#8DEB6E] hover:text-[#1E4700] hover:border-[#2ac12a]"
                     size="lg"
                     onClick={() => {
                       setSearchParams((prev) => {
@@ -1120,17 +1138,9 @@ const CheckoutPage: React.FC = () => {
           <div>
             <Card>
               <CardContent className="p-6">
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-2xl font-bold text-gray-900">
-                    Shipping Details
-                  </h2>
-                  {isAuthenticated && (
-                    <div className="flex items-center text-sm text-green-600">
-                      <User className="w-4 h-4 mr-1" />
-                      Signed in as {user?.firstName}
-                    </div>
-                  )}
-                </div>
+                <h2 className="text-2xl font-bold text-gray-900 mb-6">
+                  Shipping Details
+                </h2>
 
                 {/* Address Management Section */}
                 {isAuthenticated && (
@@ -1894,7 +1904,7 @@ const CheckoutPage: React.FC = () => {
                           </label>
                           {isDisabled && (
                             <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-10">
-                              feature coming soon
+                              {method.disabledReason ?? "feature coming soon"}
                               <div className="absolute left-1/2 -translate-x-1/2 top-full border-4 border-transparent border-t-gray-900"></div>
                             </div>
                           )}

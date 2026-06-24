@@ -57,11 +57,14 @@ const Breadcrumb: React.FC<BreadcrumbProps> = ({
 
   return (
     <nav
-      className={cn('flex items-center space-x-1 text-sm text-gray-600', className)}
+      className={cn(
+        'flex flex-wrap items-center gap-x-1.5 gap-y-2 text-xs sm:text-sm text-gray-600',
+        className
+      )}
       aria-label="Breadcrumb"
     >
       {showHome && (
-        <>
+        <span className="inline-flex items-center gap-1.5 shrink-0">
           <Link
             to="/"
             className="flex items-center hover:text-gray-900 transition-colors"
@@ -70,23 +73,26 @@ const Breadcrumb: React.FC<BreadcrumbProps> = ({
             <Home className="w-4 h-4" />
           </Link>
           {breadcrumbItems.length > 0 && (
-            <span className="flex items-center">{separator}</span>
+            <span className="flex items-center" aria-hidden="true">
+              {separator}
+            </span>
           )}
-        </>
+        </span>
       )}
 
       {breadcrumbItems.map((item, index) => (
-        <React.Fragment key={index}>
+        <span key={index} className="inline-flex items-center gap-1.5 shrink-0">
           {item.href && !item.isCurrentPage ? (
             <Link
               to={item.href}
-              className="hover:text-gray-900 transition-colors"
+              className="whitespace-nowrap hover:text-gray-900 transition-colors"
             >
               {item.label}
             </Link>
           ) : (
             <span
               className={cn(
+                'whitespace-nowrap',
                 item.isCurrentPage
                   ? 'text-gray-900 font-medium'
                   : 'text-gray-600'
@@ -98,9 +104,11 @@ const Breadcrumb: React.FC<BreadcrumbProps> = ({
           )}
 
           {index < breadcrumbItems.length - 1 && (
-            <span className="flex items-center">{separator}</span>
+            <span className="flex items-center" aria-hidden="true">
+              {separator}
+            </span>
           )}
-        </React.Fragment>
+        </span>
       ))}
     </nav>
   );

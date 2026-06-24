@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useLayoutEffect, useRef } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import {
   Star,
@@ -130,6 +130,8 @@ const ProductDetailPage: React.FC = () => {
   const [activeDetailTab, setActiveDetailTab] = useState<string>("description");
   const thumbnailRef = useRef<HTMLDivElement>(null);
   const relatedScrollRef = useRef<HTMLDivElement>(null);
+  const relatedSectionRef = useRef<HTMLDivElement>(null);
+  const [matchedSectionHeight, setMatchedSectionHeight] = useState<number | undefined>();
 
   const isWishlisted = product ? isItemInWishlist(product.id) : false;
 
@@ -308,6 +310,44 @@ const ProductDetailPage: React.FC = () => {
 
     return finalList.slice(0, 8);
   }, [product, relatedProducts]);
+
+  const hasRelatedProducts = filteredRelatedProducts.length > 0;
+
+  useLayoutEffect(() => {
+    if (!hasRelatedProducts) {
+      setMatchedSectionHeight(undefined);
+      return;
+    }
+
+    const mediaQuery = window.matchMedia("(min-width: 1024px)");
+    const syncHeight = () => {
+      const relatedSection = relatedSectionRef.current;
+      if (!relatedSection) return;
+
+      if (mediaQuery.matches) {
+        setMatchedSectionHeight(relatedSection.offsetHeight);
+      } else {
+        setMatchedSectionHeight(undefined);
+      }
+    };
+
+    syncHeight();
+
+    const resizeObserver = new ResizeObserver(syncHeight);
+    const relatedSection = relatedSectionRef.current;
+    if (relatedSection) {
+      resizeObserver.observe(relatedSection);
+    }
+
+    mediaQuery.addEventListener("change", syncHeight);
+    window.addEventListener("resize", syncHeight);
+
+    return () => {
+      resizeObserver.disconnect();
+      mediaQuery.removeEventListener("change", syncHeight);
+      window.removeEventListener("resize", syncHeight);
+    };
+  }, [hasRelatedProducts, filteredRelatedProducts.length]);
 
   const renderStars = (rating: number) => {
     return Array.from({ length: 5 }, (_, i) => (
@@ -859,10 +899,30 @@ const ProductDetailPage: React.FC = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-          <div className="lg:col-span-7 min-w-0">
-            <Card className="border border-gray-200 shadow-sm">
-              <CardContent className="p-0">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <div
+            className={cn(
+              "lg:col-span-7 min-w-0",
+              hasRelatedProducts && "lg:self-start"
+            )}
+          >
+            <Card
+              className={cn(
+                "border border-gray-200 shadow-sm",
+                hasRelatedProducts && "lg:flex lg:flex-col lg:overflow-hidden"
+              )}
+              style={
+                hasRelatedProducts && matchedSectionHeight
+                  ? { height: matchedSectionHeight }
+                  : undefined
+              }
+            >
+              <CardContent
+                className={cn(
+                  "p-0",
+                  hasRelatedProducts && "lg:flex lg:flex-col lg:h-full lg:min-h-0"
+                )}
+              >
                 <div className="border-b border-gray-200">
                   <div className="flex overflow-x-auto scrollbar-hide">
                     {[
@@ -890,7 +950,12 @@ const ProductDetailPage: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="p-6">
+                <div
+                  className={cn(
+                    "p-6",
+                    hasRelatedProducts && "lg:flex-1 lg:overflow-y-auto lg:min-h-0"
+                  )}
+                >
                   {activeDetailTab === "description" && (
                     <div className="space-y-4">
                       <h3 className="text-xl font-bold text-gray-900">Product Details</h3>
@@ -961,7 +1026,7 @@ const ProductDetailPage: React.FC = () => {
                   )}
 
                   {activeDetailTab === "shipping" && (
-                    <div className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div>
                         <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
                           <Truck className="w-5 h-5 text-primary" />
@@ -979,7 +1044,7 @@ const ProductDetailPage: React.FC = () => {
                         </div>
                       </div>
 
-                      <div className="pt-4 border-t border-gray-200">
+                      <div className="pt-4 border-t border-gray-200 md:pt-0 md:border-t-0 md:border-l md:pl-6">
                         <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
                           <RotateCcw className="w-5 h-5 text-primary" />
                           Returns & Warranty
@@ -1072,14 +1137,23 @@ const ProductDetailPage: React.FC = () => {
             </Card>
           </div>
 
-          <div className="lg:col-span-5 min-w-0">
-            {filteredRelatedProducts.length > 0 && (
-              <Card className="border border-gray-200 shadow-sm h-full">
+          <div
+            className={cn(
+              "lg:col-span-5 min-w-0",
+              hasRelatedProducts && "lg:self-start"
+            )}
+          >
+            {hasRelatedProducts && (
+              <Card ref={relatedSectionRef} className="border border-gray-200 shadow-sm">
                 <CardContent className="p-4 sm:p-5">
                   <div className="flex items-center justify-between mb-4 gap-2">
                     <h2 className="text-lg font-bold text-gray-900">You may also like</h2>
                     <Link
-                      to="/products"
+                      to={
+                        product.categoryId
+                          ? `/category/${product.categoryId}`
+                          : "/products"
+                      }
                       className="text-sm text-[#28a745] hover:underline font-medium whitespace-nowrap"
                     >
                       View all

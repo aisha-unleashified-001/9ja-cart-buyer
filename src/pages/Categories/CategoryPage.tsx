@@ -68,9 +68,10 @@ const CategoryPage: React.FC = () => {
   }, [featuredPool, currentPageIds]);
 
   const displayRelatedProducts = React.useMemo(() => {
+    if (allProducts.length === 0) return [];
     if (filteredRelatedProducts.length > 0) return filteredRelatedProducts;
     return fallbackRelatedProducts;
-  }, [filteredRelatedProducts, fallbackRelatedProducts]);
+  }, [allProducts, filteredRelatedProducts, fallbackRelatedProducts]);
 
     // Redirect services category to services page
   if (categoryId === "services") {

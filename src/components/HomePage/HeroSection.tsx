@@ -1,44 +1,111 @@
 
-
-import React from "react";
+import React, { useMemo } from "react";
 import CategoriesSidebar from "./CategoriesSidebar";
 import HeroCarousel, { type CarouselSlide } from "./HeroCarousel";
 import TopDealsPanel from "./TopDealsPanel";
 import { useAllRealCategories } from "../../hooks/api/useRealCategories";
 import { Loading } from "../UI";
+import type { Category } from "../../types";
 
-const slides: CarouselSlide[] = [
+const BANNER_SLIDES: Omit<CarouselSlide, "categoryId">[] = [
   {
-    id: "iphone",
-    title: "iPhone 14 Series",
-    subtitle: "Up to 10% off Voucher",
+    id: "electronics",
+    titlePrimary: "Next-Gen",
+    titleAccent: "Gaming & Electronics",
+    subtitle: "Laptops, Keyboards, Headsets, Monitors & More",
     cta: "Shop Now",
-    bg: "#8DEB6E",
-    image:
-      "https://images.unsplash.com/photo-1678685888233-d1d68e72282b?q=80&w=1600&auto=format&fit=crop",
+    image: "/banners/electronics-gaming.png",
+    categoryName: "Electronics",
   },
   {
-    id: "gaming",
-    title: "Pro Gaming Gear",
-    subtitle: "Headsets, Keyboards & More",
-    cta: "Explore Deals",
-    bg: "#E0EAFF",
-    image:
-      "https://images.unsplash.com/photo-1603481588273-0c4c8b1a20fd?q=80&w=1600&auto=format&fit=crop",
+    id: "phone-gadget",
+    titlePrimary: "Upgrade Your",
+    titleAccent: "Digital Life",
+    titleAccentColor: "#008743",
+    ctaColor: "#008743",
+    subtitle: "Smart Phones, Smart Watches, Air Pods, Head Set",
+    cta: "Explore deals",
+    image: "/banners/phone-gadget.png",
+    categoryName: "Phone & Gadget",
   },
   {
-    id: "appliances",
-    title: "Home Appliances",
-    subtitle: "Save up to 30%",
-    cta: "Discover",
-    bg: "#F6E5FF",
-    image:
-      "https://images.unsplash.com/photo-1585386959984-a4155223168f?q=80&w=1600&auto=format&fit=crop",
+    id: "fashion",
+    titlePrimary: "Beauty Starts",
+    titleAccent: "Here",
+    titleAccentColor: "#DD857E",
+    ctaColor: "#DD857E",
+    subtitle: "Skincare, Makeup, Luxury Fragrances",
+    cta: "Shop Beauty",
+    image: "/banners/fashion-beauty.png",
+    categoryName: "Fashion",
   },
 ];
 
+function normalizeLabel(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/&/g, " and ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+const SLIDE_CATEGORY_ALIASES: Record<string, string[]> = {
+  "Phone & Gadget": [
+    "phone and gadget",
+    "phones and gadget",
+    "phone gadget",
+    "phones gadget",
+    "phones and gadgets",
+    "phone and gadgets",
+    "devices and accessories",
+    "devices accessories",
+  ],
+};
+
+function findCategoryByName(categories: Category[], targetName: string): Category | undefined {
+  const normalizedTarget = normalizeLabel(targetName);
+
+  const exact = categories.find(
+    (cat) => normalizeLabel(cat.name) === normalizedTarget
+  );
+  if (exact) return exact;
+
+  const aliases = SLIDE_CATEGORY_ALIASES[targetName] ?? [];
+  const aliasMatch = categories.find((cat) =>
+    aliases.some((alias) => normalizeLabel(cat.name).includes(alias))
+  );
+  if (aliasMatch) return aliasMatch;
+
+  return categories.find((cat) => {
+    const normalized = normalizeLabel(cat.name);
+    return (
+      normalized.includes(normalizedTarget) ||
+      normalizedTarget.includes(normalized)
+    );
+  });
+}
+
+function resolveBannerSlides(categories: Category[]): CarouselSlide[] {
+  return BANNER_SLIDES.map((slide) => {
+    const category = slide.categoryName
+      ? findCategoryByName(categories, slide.categoryName)
+      : undefined;
+
+    return {
+      ...slide,
+      categoryId: category?.id,
+      categoryName: category?.name ?? slide.categoryName,
+    };
+  });
+}
+
 const HeroSection: React.FC = () => {
   const { categories, loading, error } = useAllRealCategories();
+
+  const slides = useMemo(
+    () => resolveBannerSlides(categories),
+    [categories]
+  );
 
   return (
     <div className="mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-4 lg:pb-6 lg:pt-4">

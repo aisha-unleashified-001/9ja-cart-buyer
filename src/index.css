@@ -284,5 +284,29 @@
   .touch-target-sm {
     @apply min-h-[40px] min-w-[40px];
   }
+
+  @keyframes hero-zoom {
+    0%,
+    100% {
+      transform: scale(1);
+    }
+    50% {
+      transform: scale(1.08);
+    }
+  }
+
+  .animate-hero-zoom {
+    animation: hero-zoom 5s ease-in-out infinite;
+  }
+
+  .hero-banner-cta,
+  .hero-banner-cta:visited,
+  .hero-banner-cta:hover,
+  .hero-banner-cta:active,
+  .hero-banner-cta span {
+    color: #ffffff !important;
+    opacity: 1 !important;
+    text-decoration: none;
+  }
 }
 

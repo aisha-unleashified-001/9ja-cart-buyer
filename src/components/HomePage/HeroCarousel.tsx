@@ -1,35 +1,49 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 export interface CarouselSlide {
   id: string;
-  title: string;
+  titlePrimary: string;
+  titleAccent?: string;
+  titleAccentColor?: string;
+  ctaColor?: string;
   subtitle: string;
   cta: string;
-  bg: string;
   image: string;
+  categoryId?: string;
+  categoryName?: string;
 }
+
+const DEFAULT_ACCENT_COLOR = '#22C55E';
+const DEFAULT_CTA_COLOR = '#1E4700';
 
 interface HeroCarouselProps {
   slides: CarouselSlide[];
   height?: string;
 }
 
-const HeroCarousel: React.FC<HeroCarouselProps> = ({ 
-  slides, 
-  height = 'h-[240px] sm:h-[300px] md:h-[360px] lg:h-[460px]' 
+const SLIDE_INTERVAL_MS = 5000;
+
+const HeroCarousel: React.FC<HeroCarouselProps> = ({
+  slides,
+  height = 'h-[240px] sm:h-[300px] md:h-[360px] lg:h-[460px]',
 }) => {
   const [active, setActive] = useState(0);
   const touchStartX = useRef<number | null>(null);
   const touchEndX = useRef<number | null>(null);
 
-  // Minimum swipe distance (in pixels) to trigger slide change
   const minSwipeDistance = 50;
 
-  const goPrev = () => setActive((i) => (i === 0 ? slides.length - 1 : i - 1));
-  const goNext = () => setActive((i) => (i === slides.length - 1 ? 0 : i + 1));
+  const goPrev = useCallback(
+    () => setActive((i) => (i === 0 ? slides.length - 1 : i - 1)),
+    [slides.length]
+  );
+  const goNext = useCallback(
+    () => setActive((i) => (i === slides.length - 1 ? 0 : i + 1)),
+    [slides.length]
+  );
 
-  // Touch event handlers for swipe functionality
   const onTouchStart = (e: React.TouchEvent) => {
     touchEndX.current = null;
     touchStartX.current = e.targetTouches[0].clientX;
@@ -41,7 +55,7 @@ const HeroCarousel: React.FC<HeroCarouselProps> = ({
 
   const onTouchEnd = () => {
     if (!touchStartX.current || !touchEndX.current) return;
-    
+
     const distance = touchStartX.current - touchEndX.current;
     const isLeftSwipe = distance > minSwipeDistance;
     const isRightSwipe = distance < -minSwipeDistance;
@@ -52,73 +66,97 @@ const HeroCarousel: React.FC<HeroCarouselProps> = ({
       goPrev();
     }
 
-    // Reset touch positions
     touchStartX.current = null;
     touchEndX.current = null;
   };
 
-  // Auto-advance slides
   React.useEffect(() => {
-    const timer = setInterval(() => {
-      goNext();
-    }, 5000);
+    const timer = setInterval(goNext, SLIDE_INTERVAL_MS);
     return () => clearInterval(timer);
-  }, [active]);
+  }, [goNext]);
 
   return (
     <section className="lg:col-span-3 xl:col-span-4 relative overflow-hidden rounded-lg border border-gray-200 shadow-sm">
-      {/* Slides */}
-      <div 
+      <div
         className={`relative ${height} overflow-hidden touch-pan-y`}
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
       >
-        {slides.map((slide, idx) => (
-          <div
-            key={slide.id}
-            className={`absolute inset-0 transition-all duration-700 ease-in-out ${
-              idx === active ? 'opacity-100 scale-100' : 'opacity-0 scale-105'
-            }`}
-            aria-hidden={idx !== active}
-          >
-            <div className="grid grid-cols-1 md:grid-cols-2 h-full">
-              {/* Content Side */}
-              <div 
-                className="flex flex-col justify-center px-4 sm:px-6 lg:px-10 py-6 sm:py-8 h-full" 
-                style={{ backgroundColor: slide.bg }}
-              >
-                <div className="max-w-md">
-                  <div className="text-xs sm:text-sm text-gray-800 mb-2 font-medium uppercase tracking-wide">
-                    {slide.title}
-                  </div>
-                  <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 mb-3 sm:mb-4 leading-tight">
-                    {slide.subtitle}
-                  </h2>
-                  <button className="inline-flex items-center gap-2 mt-2 text-gray-900 font-semibold text-sm sm:text-base hover:gap-3 transition-all duration-300 group">
-                    {slide.cta}
-                    <span className="group-hover:translate-x-1 transition-transform duration-300">→</span>
-                  </button>
-                </div>
-              </div>
-              
-              {/* Image Side */}
-              <div className="relative bg-gradient-to-br from-gray-900 to-black overflow-hidden h-full">
+        {slides.map((slide, idx) => {
+          const isActive = idx === active;
+
+          return (
+            <div
+              key={slide.id}
+              className={`absolute inset-0 transition-opacity duration-700 ease-in-out ${
+                isActive ? 'opacity-100 z-[1]' : 'opacity-0 z-0 pointer-events-none'
+              }`}
+              aria-hidden={!isActive}
+            >
+              {/* Background image with Ken Burns zoom */}
+              <div className="absolute inset-0 overflow-hidden bg-[#0a0f0a]">
                 <img
                   src={slide.image}
-                  alt={slide.title}
-                  className="h-full w-full object-cover hover:scale-110 transition-transform duration-700"
-                  loading={idx === active ? "eager" : "lazy"}
-                  fetchPriority={idx === 0 ? "high" : undefined}
+                  alt=""
+                  aria-hidden
+                  className={`h-full w-full object-cover ${
+                    isActive ? 'animate-hero-zoom' : 'scale-100'
+                  }`}
+                  loading={idx === 0 ? 'eager' : 'lazy'}
+                  fetchPriority={idx === 0 ? 'high' : undefined}
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
+              </div>
+
+              {/* Left gradient for text legibility */}
+              <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/50 to-transparent" />
+
+              {/* Text overlay */}
+              <div className="relative z-10 flex h-full flex-col justify-center px-5 sm:px-8 md:px-10 lg:px-12 py-6 sm:py-8 max-w-xl">
+                <div className="space-y-2 sm:space-y-3">
+                  <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-[2.75rem] font-bold leading-[1.1] tracking-tight">
+                    <span className="block text-white">{slide.titlePrimary}</span>
+                    {slide.titleAccent && (
+                      <span
+                        className="block"
+                        style={{ color: slide.titleAccentColor ?? DEFAULT_ACCENT_COLOR }}
+                      >
+                        {slide.titleAccent}
+                      </span>
+                    )}
+                  </h2>
+                  <p className="text-sm sm:text-base text-white/85 max-w-md leading-relaxed">
+                    {slide.subtitle}
+                  </p>
+                </div>
+
+                {slide.categoryId ? (
+                  <Link
+                    to={`/category/${slide.categoryId}`}
+                    state={{ categoryName: slide.categoryName }}
+                    style={{ backgroundColor: slide.ctaColor ?? DEFAULT_CTA_COLOR }}
+                    className="hero-banner-cta mt-5 sm:mt-6 inline-flex w-fit items-center gap-2 rounded-full px-5 sm:px-6 py-2.5 sm:py-3 text-sm sm:text-base font-semibold transition-[transform,filter] duration-300 hover:brightness-95 hover:gap-3 group"
+                  >
+                    <span>{slide.cta}</span>
+                    <span className="transition-transform duration-300 group-hover:translate-x-0.5">
+                      →
+                    </span>
+                  </Link>
+                ) : (
+                  <span
+                    style={{ backgroundColor: slide.ctaColor ?? DEFAULT_CTA_COLOR }}
+                    className="hero-banner-cta mt-5 sm:mt-6 inline-flex w-fit items-center gap-2 rounded-full px-5 sm:px-6 py-2.5 sm:py-3 text-sm sm:text-base font-semibold"
+                  >
+                    {slide.cta}
+                    <span>→</span>
+                  </span>
+                )}
               </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
-      {/* Controls */}
       <button
         type="button"
         onClick={goPrev}
@@ -136,15 +174,14 @@ const HeroCarousel: React.FC<HeroCarouselProps> = ({
         <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5" />
       </button>
 
-      {/* Progress Dots */}
-      <div className="absolute bottom-3 sm:bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2">
+      <div className="absolute bottom-3 sm:bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2 z-10">
         {slides.map((_, idx) => (
           <button
             key={idx}
             aria-label={`Go to slide ${idx + 1}`}
             className={`h-2 rounded-full transition-all duration-300 ${
-              idx === active 
-                ? 'bg-white w-8 shadow-lg' 
+              idx === active
+                ? 'bg-white w-8 shadow-lg'
                 : 'bg-white/60 w-2 hover:bg-white/80'
             }`}
             onClick={() => setActive(idx)}
@@ -152,8 +189,7 @@ const HeroCarousel: React.FC<HeroCarouselProps> = ({
         ))}
       </div>
 
-      {/* Slide Counter */}
-      <div className="absolute top-3 sm:top-4 right-3 sm:right-4 bg-black/50 text-white px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium">
+      <div className="absolute top-3 sm:top-4 right-3 sm:right-4 bg-black/50 text-white px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium z-10">
         {active + 1} / {slides.length}
       </div>
     </section>

@@ -285,18 +285,17 @@
     @apply min-h-[40px] min-w-[40px];
   }
 
-  @keyframes hero-zoom {
-    0%,
+  @keyframes hero-zoom-out {
+    0% {
+      transform: scale(1.1);
+    }
     100% {
       transform: scale(1);
-    }
-    50% {
-      transform: scale(1.08);
     }
   }
 
   .animate-hero-zoom {
-    animation: hero-zoom 5s ease-in-out infinite;
+    animation: hero-zoom-out 7s ease-out forwards;
   }
 
   .hero-banner-cta,

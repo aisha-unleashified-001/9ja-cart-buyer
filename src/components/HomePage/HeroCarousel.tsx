@@ -1,6 +1,5 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 export interface CarouselSlide {
   id: string;
@@ -17,6 +16,7 @@ export interface CarouselSlide {
 
 const DEFAULT_ACCENT_COLOR = '#22C55E';
 const DEFAULT_CTA_COLOR = '#1E4700';
+const BNPL_SEAL_SRC = '/banners/9jacart%20BNPL%20seal.png';
 
 interface HeroCarouselProps {
   slides: CarouselSlide[];
@@ -157,27 +157,19 @@ const HeroCarousel: React.FC<HeroCarouselProps> = ({
         })}
       </div>
 
-      <button
-        type="button"
-        onClick={goPrev}
-        aria-label="Previous slide"
-        className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white rounded-full p-2 sm:p-3 shadow-lg hover:shadow-xl transition-all duration-300 z-10"
-      >
-        <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5" />
-      </button>
-      <button
-        type="button"
-        onClick={goNext}
-        aria-label="Next slide"
-        className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white rounded-full p-2 sm:p-3 shadow-lg hover:shadow-xl transition-all duration-300 z-10"
-      >
-        <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5" />
-      </button>
+      {/* BNPL seal — always visible on the banner container */}
+      <img
+        src={BNPL_SEAL_SRC}
+        alt="Buy Now Pay Later — Powered by 9ja-cart"
+        className="pointer-events-none absolute bottom-2 right-2 sm:bottom-3 sm:right-3 z-20 h-20 w-20 sm:h-24 sm:w-24 md:h-28 md:w-28 object-contain drop-shadow-md"
+      />
 
+      {/* Progress dots only */}
       <div className="absolute bottom-3 sm:bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2 z-10">
         {slides.map((_, idx) => (
           <button
             key={idx}
+            type="button"
             aria-label={`Go to slide ${idx + 1}`}
             className={`h-2 rounded-full transition-all duration-300 ${
               idx === active
@@ -187,10 +179,6 @@ const HeroCarousel: React.FC<HeroCarouselProps> = ({
             onClick={() => setActive(idx)}
           />
         ))}
-      </div>
-
-      <div className="absolute top-3 sm:top-4 right-3 sm:right-4 bg-black/50 text-white px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium z-10">
-        {active + 1} / {slides.length}
       </div>
     </section>
   );

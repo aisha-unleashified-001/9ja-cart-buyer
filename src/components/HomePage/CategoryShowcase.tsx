@@ -51,18 +51,25 @@ function ShopCategoryCard({
     >
       <div
         className={cn(
-          "flex h-48 flex-col overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm transition-all duration-300",
+          "flex flex-col overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm transition-all duration-300",
           "group-hover:border-primary group-hover:shadow-md"
         )}
       >
-        <div className="relative min-h-[7.5rem] w-full flex-1 bg-white">
+        <div className="relative h-[110px] w-full shrink-0 overflow-hidden bg-white">
           {showImage ? (
             <img
               src={imageUrl}
               alt={category.name}
               loading="lazy"
               onError={() => setImgError(true)}
-              className="absolute inset-0 h-full w-full object-contain px-0 py-1 transition-transform duration-300 group-hover:scale-[1.03]"
+              style={{
+                width: "100%",
+                padding: 0,
+                height: "100%",
+                maxHeight: "110px",
+                objectFit: "cover",
+              }}
+              className="transition-transform duration-300 group-hover:scale-[1.03]"
             />
           ) : (
             <div className="flex h-full items-center justify-center p-3">
@@ -73,7 +80,7 @@ function ShopCategoryCard({
             </div>
           )}
         </div>
-        <div className="shrink-0 px-1 py-2.5">
+        <div className="shrink-0 px-1 py-1.5">
           <span className="block text-center text-sm font-medium leading-snug text-gray-900 line-clamp-2">
             {category.name}
           </span>

@@ -8,8 +8,28 @@ import { Badge, Button } from "../UI";
 /** How often the featured deal cycles to the next product (ms). */
 const DEAL_ROTATE_MS = 3500;
 
+function getMsUntilMidnight(): number {
+  const now = new Date();
+  const midnight = new Date(now);
+  midnight.setHours(24, 0, 0, 0);
+  return Math.max(0, midnight.getTime() - now.getTime());
+}
+
+function formatCountdownParts(ms: number) {
+  const totalSeconds = Math.floor(ms / 1000);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  return {
+    hours: String(hours).padStart(2, "0"),
+    minutes: String(minutes).padStart(2, "0"),
+    seconds: String(seconds).padStart(2, "0"),
+  };
+}
+
 const TopDealsPanel: React.FC = () => {
   const { allProducts, loading } = useBuyerActiveProductsList({});
+  const [remainingMs, setRemainingMs] = React.useState(getMsUntilMidnight);
 
   const flashDeals = React.useMemo(() => {
     const flashSaleProducts = allProducts.filter((product) => {
@@ -42,6 +62,15 @@ const TopDealsPanel: React.FC = () => {
     return () => window.clearInterval(id);
   }, [flashDeals.length]);
 
+  React.useEffect(() => {
+    setRemainingMs(getMsUntilMidnight());
+    const id = window.setInterval(() => {
+      setRemainingMs(getMsUntilMidnight());
+    }, 1000);
+    return () => window.clearInterval(id);
+  }, []);
+
+  const countdown = formatCountdownParts(remainingMs);
   const activeDeal = flashDeals[dealIndex] ?? flashDeals[0];
 
   if (loading || !activeDeal) {
@@ -71,20 +100,26 @@ const TopDealsPanel: React.FC = () => {
         </p>
         <div className="mt-3 grid grid-cols-3 gap-2 text-center">
           <div className="flex flex-col items-center">
-            <div className="flex aspect-square size-12 shrink-0 items-center justify-center rounded-md bg-[#8DEB6E]/20 px-2.5">
-              <p className="text-[28px] font-bold leading-none text-primary tabular-nums">08</p>
+            <div className="flex aspect-square size-12 shrink-0 items-center justify-center rounded-md bg-[#8DEB6E]/20 p-2">
+              <p className="text-xl font-bold leading-none text-primary tabular-nums">
+                {countdown.hours}
+              </p>
             </div>
             <p className="mt-2 text-[10px] uppercase text-gray-500">HRS</p>
           </div>
           <div className="flex flex-col items-center">
-            <div className="flex aspect-square size-12 shrink-0 items-center justify-center rounded-md bg-[#8DEB6E]/20 px-2.5">
-              <p className="text-[28px] font-bold leading-none text-primary tabular-nums">34</p>
+            <div className="flex aspect-square size-12 shrink-0 items-center justify-center rounded-md bg-[#8DEB6E]/20 p-2">
+              <p className="text-xl font-bold leading-none text-primary tabular-nums">
+                {countdown.minutes}
+              </p>
             </div>
             <p className="mt-2 text-[10px] uppercase text-gray-500">MINS</p>
           </div>
           <div className="flex flex-col items-center">
-            <div className="flex aspect-square size-12 shrink-0 items-center justify-center rounded-md bg-[#8DEB6E]/20 px-2.5">
-              <p className="text-[28px] font-bold leading-none text-primary tabular-nums">19</p>
+            <div className="flex aspect-square size-12 shrink-0 items-center justify-center rounded-md bg-[#8DEB6E]/20 p-2">
+              <p className="text-xl font-bold leading-none text-primary tabular-nums">
+                {countdown.seconds}
+              </p>
             </div>
             <p className="mt-2 text-[10px] uppercase text-gray-500">SECS</p>
           </div>

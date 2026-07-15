@@ -161,7 +161,7 @@ const HeroCarousel: React.FC<HeroCarouselProps> = ({
       <img
         src={BNPL_SEAL_SRC}
         alt="Buy Now Pay Later — Powered by 9ja-cart"
-        className="pointer-events-none absolute bottom-0 right-1 sm:bottom-0 sm:right-2 z-20 h-28 w-28 sm:h-32 sm:w-32 md:h-36 md:w-36 object-contain drop-shadow-md opacity-80"
+        className="pointer-events-none absolute bottom-0 right-1 sm:bottom-0 sm:right-2 z-20 h-36 w-36 sm:h-40 sm:w-40 md:h-44 md:w-44 object-contain drop-shadow-md opacity-80"
       />
 
       {/* Progress dots only */}

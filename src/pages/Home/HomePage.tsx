@@ -58,7 +58,7 @@ const HomePage: React.FC = () => {
       <img
         src="/banners/9jacart%20BNPL%20seal.png"
         alt="Buy Now Pay Later — Powered by 9ja-cart"
-        className="pointer-events-none fixed bottom-4 right-4 z-50 h-32 w-32 sm:bottom-6 sm:right-6 sm:h-36 sm:w-36 md:h-40 md:w-40 object-contain drop-shadow-lg opacity-60"
+        className="pointer-events-none fixed bottom-4 right-4 z-50 h-40 w-40 sm:bottom-6 sm:right-6 sm:h-44 sm:w-44 md:h-[200px] md:w-[200px] object-contain drop-shadow-lg opacity-60"
       />
     </div>
   );

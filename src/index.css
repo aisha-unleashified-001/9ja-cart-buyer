@@ -298,6 +298,45 @@
     animation: hero-zoom-out 7s ease-out forwards;
   }
 
+  /* Decorative floating bubbles (side margins) */
+  @keyframes float-bubble {
+    0%, 100% {
+      transform: translateY(0) translateX(0) scale(1);
+    }
+    25% {
+      transform: translateY(-7px) translateX(2px) scale(1.05);
+    }
+    50% {
+      transform: translateY(-12px) translateX(-2px) scale(0.95);
+    }
+    75% {
+      transform: translateY(-4px) translateX(3px) scale(1.02);
+    }
+  }
+
+  @keyframes float-bubble-slow {
+    0%, 100% {
+      transform: translateY(0) translateX(0) scale(1);
+    }
+    25% {
+      transform: translateY(-5px) translateX(-3px) scale(0.94);
+    }
+    50% {
+      transform: translateY(-9px) translateX(2px) scale(1.04);
+    }
+    75% {
+      transform: translateY(-3px) translateX(-2px) scale(0.98);
+    }
+  }
+
+  .animate-float {
+    animation: float-bubble 6s ease-in-out infinite;
+  }
+
+  .animate-float-slow {
+    animation: float-bubble-slow 8s ease-in-out infinite;
+  }
+
   .hero-banner-cta,
   .hero-banner-cta:visited,
   .hero-banner-cta:hover,

@@ -5,6 +5,7 @@ import SecondaryNav from "./SecondaryNav";
 import HomeSubNav from "@/components/HomePage/HomeSubNav";
 import Footer from "./Footer";
 import { LayoutContext } from "@/contexts/LayoutContext";
+import { FloatingBubbles } from "@/components/UI";
 
 const Layout: React.FC = () => {
   const { pathname } = useLocation();
@@ -16,6 +17,7 @@ const Layout: React.FC = () => {
   return (
     <LayoutContext.Provider value={{ hideFooter, setHideFooter }}>
       <div className="min-h-screen flex flex-col">
+        <FloatingBubbles />
         <NewHeader />
         <div className="relative z-[40]">
           {pathname === "/" ? <HomeSubNav /> : <SecondaryNav />}

@@ -11,6 +11,7 @@ export { Image } from './Image';
 export { default as CartBadge } from './CartBadge';
 export { ErrorBoundary } from './ErrorBoundary';
 export { Toast, ToastContainer } from './Toast';
+export { default as FloatingBubbles } from './FloatingBubbles';
 
 export type { ButtonProps } from './Button';
 export type { InputProps } from './Input';

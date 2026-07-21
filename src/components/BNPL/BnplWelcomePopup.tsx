@@ -8,9 +8,7 @@ import {
   BNPL_MIN_PAY_NOW_RATE,
 } from "../../lib/bnplWidget";
 import {
-  clearBnplWelcomePending,
   hasBnplWelcomeBeenSeen,
-  isBnplWelcomePending,
   markBnplWelcomeSeen,
 } from "../../lib/bnplWelcomePopup";
 
@@ -31,6 +29,7 @@ function shouldSkipPath(pathname: string): boolean {
   return (
     pathname.startsWith("/auth") ||
     pathname.startsWith("/checkout") ||
+    pathname.startsWith("/account") ||
     pathname.startsWith("/login") ||
     pathname.startsWith("/register")
   );
@@ -43,7 +42,6 @@ const BnplWelcomePopup: React.FC = () => {
   const { pathname } = useLocation();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const [isOpen, setIsOpen] = useState(false);
-  const [pendingShow, setPendingShow] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const clearTimer = useCallback(() => {
@@ -55,51 +53,41 @@ const BnplWelcomePopup: React.FC = () => {
 
   const markSeenAndClose = useCallback(() => {
     markBnplWelcomeSeen();
-    setPendingShow(false);
     setIsOpen(false);
   }, []);
 
-  // Pick up the pending flag set by login / Google login / email verify.
+  // Show popup after the user is on a normal website route for a few seconds.
+  // This is route-based (not the exact login/sign-up moment).
   useEffect(() => {
+    clearTimer();
+
     if (!isAuthenticated) {
-      clearTimer();
-      setPendingShow(false);
       setIsOpen(false);
       return;
     }
 
+    if (isOpen) return;
+
     if (hasBnplWelcomeBeenSeen()) {
-      clearBnplWelcomePending();
-      return;
-    }
-
-    if (isBnplWelcomePending()) {
-      setPendingShow(true);
-    }
-  }, [isAuthenticated, clearTimer]);
-
-  // Wait until the user is off auth/checkout, then show after a short delay.
-  useEffect(() => {
-    clearTimer();
-
-    if (!pendingShow || !isAuthenticated || isOpen || hasBnplWelcomeBeenSeen()) {
+      setIsOpen(false);
       return;
     }
 
     if (shouldSkipPath(pathname)) {
+      setIsOpen(false);
       return;
     }
 
     timerRef.current = setTimeout(() => {
       timerRef.current = null;
       if (!useAuthStore.getState().isAuthenticated) return;
-      if (shouldSkipPath(window.location.pathname)) return;
       if (hasBnplWelcomeBeenSeen()) return;
+      if (shouldSkipPath(window.location.pathname)) return;
       setIsOpen(true);
     }, SHOW_DELAY_MS);
 
     return clearTimer;
-  }, [pendingShow, isAuthenticated, pathname, isOpen, clearTimer]);
+  }, [isAuthenticated, pathname, isOpen, clearTimer]);
 
   useEffect(() => {
     if (isOpen && shouldSkipPath(pathname)) {
@@ -120,12 +108,14 @@ const BnplWelcomePopup: React.FC = () => {
     >
       <div className="space-y-3">
         <div className="flex items-center gap-2">
-          <img
-            src="/banners/9jacart%20BNPL%20seal.png"
-            alt=""
-            aria-hidden
-            className="h-20 w-20 sm:h-24 sm:w-24 shrink-0 object-contain -m-1 opacity-90"
-          />
+          <div className="relative h-16 w-16 sm:h-20 sm:w-20 shrink-0 overflow-hidden">
+            <img
+              src="/banners/9jacart%20BNPL%20seal.png"
+              alt=""
+              aria-hidden
+                className="absolute inset-0 h-full w-full scale-[1.15] object-cover opacity-90"
+            />
+          </div>
           <p className="text-sm text-muted-foreground leading-snug">
             Welcome to 9jaCart. With{" "}
             <span className="font-medium text-foreground">Pay Small Small</span>,

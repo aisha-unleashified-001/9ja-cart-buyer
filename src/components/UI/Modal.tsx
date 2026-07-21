@@ -9,6 +9,8 @@ interface ModalProps {
   children: React.ReactNode;
   size?: 'sm' | 'md' | 'lg' | 'xl';
   className?: string;
+  /** Optional override for the body padding. Defaults to `p-6`. */
+  contentClassName?: string;
 }
 
 const Modal: React.FC<ModalProps> = ({
@@ -18,6 +20,7 @@ const Modal: React.FC<ModalProps> = ({
   children,
   size = 'md',
   className,
+  contentClassName,
 }) => {
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
@@ -76,7 +79,7 @@ const Modal: React.FC<ModalProps> = ({
         )}
 
         {/* Content */}
-        <div className="p-6">
+        <div className={cn(contentClassName ?? 'p-6')}>
           {children}
         </div>
       </div>

@@ -13,6 +13,8 @@ import { useNavigate } from "react-router-dom";
 const HomePage: React.FC = () => {
   const navigate = useNavigate();
   const { isAuthenticated, pendingVerification } = useAuthStore();
+  const heroRef = React.useRef<HTMLDivElement>(null);
+  const [showFixedBnplBadge, setShowFixedBnplBadge] = React.useState(false);
 
   React.useEffect(() => {
     const verifyAfterPaymentFlag = sessionStorage.getItem(
@@ -31,6 +33,23 @@ const HomePage: React.FC = () => {
     sessionStorage.removeItem("checkout_verify_email_after_payment");
   }, [isAuthenticated, navigate, pendingVerification]);
 
+  // Show the fixed BNPL badge only after the hero/banner leaves the viewport
+  // (mobile + desktop). Banner seal and other BNPL flows are unaffected.
+  React.useEffect(() => {
+    const hero = heroRef.current;
+    if (!hero) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setShowFixedBnplBadge(!entry.isIntersecting);
+      },
+      { threshold: 0 }
+    );
+
+    observer.observe(hero);
+    return () => observer.disconnect();
+  }, []);
+
   return (
     <div className="bg-white min-h-screen max-w-[960px] lg:max-w-7xl 2xl:max-w-[1550px] mx-auto">
       <Helmet>
@@ -45,7 +64,9 @@ const HomePage: React.FC = () => {
         <meta name="twitter:description" content="Shop top deals on food, gadgets, electronics, fashion & lifestyle products at 9jaCart.ng — Nigeria's trusted Buy Now Pay Later online store. Fast delivery, secure checkout & affordable prices" />
         <link rel="icon" type="image/svg+xml" href="/9Jacart Icon SVG.svg" />
       </Helmet>
-      <HeroSection />
+      <div ref={heroRef}>
+        <HeroSection />
+      </div>
       <FlashSales />
       <CategoryShowcase />
       <FastSelling />
@@ -54,12 +75,14 @@ const HomePage: React.FC = () => {
       )}
       <LiveProducts />
 
-      {/* Fixed BNPL badge — homepage only; does not intercept clicks */}
-      <img
-        src="/banners/9jacart%20BNPL%20seal.png"
-        alt="Buy Now Pay Later — Powered by 9ja-cart"
-        className="pointer-events-none fixed bottom-4 right-4 z-50 h-40 w-40 sm:bottom-6 sm:right-6 sm:h-44 sm:w-44 md:h-[200px] md:w-[200px] object-contain drop-shadow-lg opacity-60"
-      />
+      {/* Fixed BNPL badge — homepage only after scrolling past banner; does not intercept clicks */}
+      {showFixedBnplBadge && (
+        <img
+          src="/banners/9jacart%20BNPL%20seal.png"
+          alt="Buy Now Pay Later — Powered by 9ja-cart"
+          className="pointer-events-none fixed bottom-4 right-4 z-50 h-40 w-40 sm:bottom-6 sm:right-6 sm:h-44 sm:w-44 md:h-[200px] md:w-[200px] object-contain drop-shadow-lg opacity-60"
+        />
+      )}
     </div>
   );
 };

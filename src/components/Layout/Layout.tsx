@@ -6,6 +6,7 @@ import HomeSubNav from "@/components/HomePage/HomeSubNav";
 import Footer from "./Footer";
 import { LayoutContext } from "@/contexts/LayoutContext";
 import { FloatingBubbles } from "@/components/UI";
+import BnplWelcomePopup from "@/components/BNPL/BnplWelcomePopup";
 
 const Layout: React.FC = () => {
   const { pathname } = useLocation();
@@ -26,6 +27,7 @@ const Layout: React.FC = () => {
           <Outlet />
         </main>
         {!hideFooter && <Footer />}
+        <BnplWelcomePopup />
       </div>
     </LayoutContext.Provider>
   );

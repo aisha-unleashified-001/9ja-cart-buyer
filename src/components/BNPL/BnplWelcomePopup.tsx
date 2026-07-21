@@ -29,7 +29,6 @@ function shouldSkipPath(pathname: string): boolean {
   return (
     pathname.startsWith("/auth") ||
     pathname.startsWith("/checkout") ||
-    pathname.startsWith("/account") ||
     pathname.startsWith("/login") ||
     pathname.startsWith("/register")
   );

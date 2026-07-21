@@ -27,10 +27,8 @@ const HIGHLIGHTS = [
 
 function shouldSkipPath(pathname: string): boolean {
   return (
-    pathname.startsWith("/auth") ||
-    pathname.startsWith("/checkout") ||
-    pathname.startsWith("/login") ||
-    pathname.startsWith("/register")
+    // Don't interfere with the checkout BNPL flow.
+    pathname.startsWith("/checkout")
   );
 }
 
@@ -58,9 +56,8 @@ const BnplWelcomePopup: React.FC = () => {
   // Show popup after the user is on a normal website route for a few seconds.
   // This is route-based (not the exact login/sign-up moment).
   useEffect(() => {
-    clearTimer();
-
     if (!isAuthenticated) {
+      clearTimer();
       setIsOpen(false);
       return;
     }
@@ -68,14 +65,20 @@ const BnplWelcomePopup: React.FC = () => {
     if (isOpen) return;
 
     if (hasBnplWelcomeBeenSeen()) {
+      clearTimer();
       setIsOpen(false);
       return;
     }
 
     if (shouldSkipPath(pathname)) {
+      clearTimer();
       setIsOpen(false);
       return;
     }
+
+    // If a timer is already running, don't restart it on every re-render/path change.
+    // This prevents redirect chains on production from continuously clearing the timer.
+    if (timerRef.current) return;
 
     timerRef.current = setTimeout(() => {
       timerRef.current = null;
@@ -84,8 +87,6 @@ const BnplWelcomePopup: React.FC = () => {
       if (shouldSkipPath(window.location.pathname)) return;
       setIsOpen(true);
     }, SHOW_DELAY_MS);
-
-    return clearTimer;
   }, [isAuthenticated, pathname, isOpen, clearTimer]);
 
   useEffect(() => {
